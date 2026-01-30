@@ -18,6 +18,8 @@ namespace BluetoothBatteryUI
         private void LoadSettings()
         {
             ThresholdTextBox.Text = settings.LowBatteryThreshold.ToString();
+            RefreshIntervalTextBox.Text = settings.AutoRefreshIntervalMinutes.ToString();
+            EnableAutoRefreshCheckBox.IsChecked = settings.EnableAutoRefresh;
             EnableAlertCheckBox.IsChecked = settings.EnableLowBatteryAlert;
             UseToastCheckBox.IsChecked = settings.UseToastNotification;
             StartupCheckBox.IsChecked = settings.StartWithWindows;
@@ -78,8 +80,19 @@ namespace BluetoothBatteryUI
                     return;
                 }
 
+                // 验证刷新间隔
+                if (!int.TryParse(RefreshIntervalTextBox.Text, out int refreshInterval) || 
+                    refreshInterval < 1 || refreshInterval > 1440)
+                {
+                    MessageBox.Show("刷新间隔必须在 1-1440 分钟之间", "输入错误", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 // 保存设置
                 settings.LowBatteryThreshold = threshold;
+                settings.AutoRefreshIntervalMinutes = refreshInterval;
+                settings.EnableAutoRefresh = EnableAutoRefreshCheckBox.IsChecked ?? false;
                 settings.EnableLowBatteryAlert = EnableAlertCheckBox.IsChecked ?? false;
                 settings.UseToastNotification = UseToastCheckBox.IsChecked ?? false;
                 settings.StartWithWindows = StartupCheckBox.IsChecked ?? false;

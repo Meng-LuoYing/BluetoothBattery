@@ -119,6 +119,23 @@
                                              From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever"/>
                         </Storyboard>
                         
+                        <!-- 扫描线动画 -->
+                        <Storyboard x:Key="ScanLineAnimation">
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="ScanLineTransform" 
+                                                          Storyboard.TargetProperty="Y"
+                                                          RepeatBehavior="Forever">
+                                <LinearDoubleKeyFrame Value="0" KeyTime="0:0:0"/>
+                                <LinearDoubleKeyFrame Value="14" KeyTime="0:0:0.8"/>
+                                <LinearDoubleKeyFrame Value="0" KeyTime="0:0:0.81"/>
+                            </DoubleAnimationUsingKeyFrames>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="BatteryScanLine" 
+                                                          Storyboard.TargetProperty="Opacity"
+                                                          RepeatBehavior="Forever">
+                                <DiscreteDoubleKeyFrame Value="0.8" KeyTime="0:0:0"/>
+                                <DiscreteDoubleKeyFrame Value="0" KeyTime="0:0:0.81"/>
+                            </DoubleAnimationUsingKeyFrames>
+                        </Storyboard>
+                        
                         <!-- 按钮基础样式 -->
                         <Style x:Key="IconButtonStyle" TargetType="Button">
                             <Setter Property="Background" Value="Transparent"/>
@@ -167,40 +184,30 @@
                     </Button>
                     
                     <!-- 2. 刷新电量按钮 -->
-                    <!-- 2. 刷新电量按钮 -->
                     <Button x:Name="RefreshBatteryButton"
                             ToolTip="刷新电量"
                             Style="{StaticResource IconButtonStyle}"
                             Click="RefreshBattery_Click">
                         <Grid Width="24" Height="24">
-                            <!-- Rotating Group (Outer Ring) -->
-                            <!-- Using a 24x24 canvas directly for perfect centering -->
-                            <Grid x:Name="BatteryOuterGroup" Width="24" Height="24" RenderTransformOrigin="0.5,0.5">
-                                <Grid.RenderTransform>
-                                    <RotateTransform x:Name="BatteryRingRotate" Angle="0"/>
-                                </Grid.RenderTransform>
-                                
-                                <!-- Center is 12,12. Radius 9 (fits in 24x24 padding 3). -->
-                                <!-- Ring Path: Arc from (12, 3) to ... -->
-                                <!-- Split Ring with Arrows -->
-                                <Path Stroke="White" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                      Data="M 12,3 A 9,9 0 1 0 20.4,8.5 M 21,12 L 18,12 L 18,9
-                                            M 12,21 A 9,9 0 1 0 3.6,15.5 M 3,12 L 6,12 L 6,15"/>
-                            </Grid>
-                            
-
-                            <!-- Refined Battery Path: 
-                                 Body: Rect 8x12 centered.
-                                 Cap: Rect 4x2 on top.
-                            -->
-                             <Grid Width="10" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                 <!-- Cap -->
-                                 <Rectangle Width="4" Height="2" Fill="White" VerticalAlignment="Top" Margin="0,0,0,0"/>
-                                 <!-- Body -->
-                                 <Border BorderBrush="White" BorderThickness="1.5" Margin="0,3,0,0" CornerRadius="1"/>
-                                 <!-- Level (Full) -->
-                                 <Rectangle Fill="White" Margin="2,5,2,2"/>
-                             </Grid>
+                            <!-- Simple Battery Icon -->
+                            <Viewbox Width="24" Height="24">
+                                <Canvas Width="24" Height="24">
+                                    <!-- Battery Body -->
+                                    <Rectangle x:Name="BatteryBody" 
+                                               Canvas.Left="7" Canvas.Top="6" 
+                                               Width="10" Height="14" 
+                                               Stroke="White" StrokeThickness="1.5" 
+                                               Fill="Transparent"
+                                               RadiusX="1" RadiusY="1"/>
+                                    
+                                    <!-- Battery Terminal -->
+                                    <Rectangle x:Name="BatteryTerminal"
+                                               Canvas.Left="10" Canvas.Top="3" 
+                                               Width="4" Height="3" 
+                                               Fill="White"
+                                               RadiusX="0.5" RadiusY="0.5"/>
+                                </Canvas>
+                            </Viewbox>
                         </Grid>
                     </Button>
                     

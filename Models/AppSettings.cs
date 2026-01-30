@@ -21,5 +21,9 @@ namespace BluetoothBatteryUI
         
         // 已提醒的设备（避免重复提醒）
         public HashSet<string> AlertedDevices { get; set; } = new HashSet<string>();
+        
+        // 自动刷新设置
+        public bool EnableAutoRefresh { get; set; } = true;
+        public int AutoRefreshIntervalMinutes { get; set; } = 5;
     }
 }

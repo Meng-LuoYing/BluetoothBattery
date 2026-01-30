@@ -9,6 +9,7 @@ using System.Windows.Media.Animation;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
+using BluetoothBatteryUI.Models;
 
 namespace BluetoothBatteryUI
 {
@@ -21,9 +22,12 @@ namespace BluetoothBatteryUI
         private Dictionary<string, Border> deviceCards = new Dictionary<string, Border>();
         private Dictionary<string, int> deviceBatteryLevels = new Dictionary<string, int>();  // 跟踪设备电量
         private Dictionary<string, string> deviceNames = new Dictionary<string, string>();  // 跟踪设备名称
+        private Dictionary<string, string> deviceConnectionTypes = new Dictionary<string, string>();  // 跟踪设备连接类型
         private bool isScanning = false;
         private bool showConnectedOnly = true;  // 默认只显示已连接设备
         private AppSettings settings;
+        private System.Threading.Timer? autoRefreshTimer;  // 自动刷新定时器
+        private bool isRefreshing = false;  // 刷新状态标志
 
         public MainWindow()
         {
@@ -40,6 +44,9 @@ namespace BluetoothBatteryUI
             }
             
             Logger.Log("应用程序启动");
+            
+            // 初始化自动刷新
+            InitializeAutoRefresh();
         }
 
 
@@ -163,6 +170,9 @@ namespace BluetoothBatteryUI
                 settings = SettingsManager.LoadSettings();
                 Logger.SetDetailedLogging(settings.DetailedLogging);
                 Logger.Log("设置已更新");
+                
+                // 重启自动刷新定时器
+                RestartAutoRefresh();
             }
         }
 
@@ -422,6 +432,10 @@ namespace BluetoothBatteryUI
             string devName = string.IsNullOrWhiteSpace(deviceInfo.Name) ? "未命名设备" : deviceInfo.Name;
             deviceNames[deviceInfo.Id] = devName;
             
+            // 检测连接类型
+            string connectionType = DetectConnectionType(deviceInfo);
+            deviceConnectionTypes[deviceInfo.Id] = connectionType;
+            
             // 创建设备卡片
             var card = new Border
             {
@@ -469,6 +483,26 @@ namespace BluetoothBatteryUI
             statusBadge.Child = statusText;
             namePanel.Children.Add(statusBadge);
             
+            // 连接类型标签
+            var connectionTypeBadge = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0, 120, 212)),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(8, 2, 8, 2),
+                Margin = new Thickness(10, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            
+            var connectionTypeText = new TextBlock
+            {
+                Text = connectionType,
+                FontSize = 11,
+                Foreground = Brushes.White,
+                FontWeight = FontWeights.SemiBold
+            };
+            connectionTypeBadge.Child = connectionTypeText;
+            namePanel.Children.Add(connectionTypeBadge);
+            
             // 隐藏按钮
             var hideButton = new Button
             {
@@ -484,6 +518,7 @@ namespace BluetoothBatteryUI
             };
             hideButton.Click += (s, e) => HideDevice(deviceInfo.Id);
             namePanel.Children.Add(hideButton);
+
             
             leftPanel.Children.Add(namePanel);
             leftPanel.Children.Add(new TextBlock { Height = 8 }); // 间距
@@ -553,10 +588,18 @@ namespace BluetoothBatteryUI
             grid.Children.Add(rightPanel);
 
             card.Child = grid;
-            DeviceListPanel.Children.Add(card);
+            // 设置卡片内容
+            
+            // 添加点击事件打开详情窗口
+            card.MouseLeftButtonDown += (s, e) =>
+            {
+                OpenDeviceDetails(deviceInfo.Id);
+            };
+            card.Cursor = System.Windows.Input.Cursors.Hand;
             
             // 将卡片添加到缓存
             deviceCards[deviceInfo.Id] = card;
+            DeviceListPanel.Children.Add(card);
 
             // 淡入动画
             var fadeIn = new DoubleAnimation
@@ -611,6 +654,11 @@ namespace BluetoothBatteryUI
                         progressBar.Foreground = new SolidColorBrush(color);
                         batteryPercentText.Foreground = new SolidColorBrush(color);
                         
+                        // 记录电量历史
+                        string devName = deviceNames.ContainsKey(deviceInfo.Id) ? deviceNames[deviceInfo.Id] : "未命名设备";
+                        string connType = deviceConnectionTypes.ContainsKey(deviceInfo.Id) ? deviceConnectionTypes[deviceInfo.Id] : "未知";
+                        DeviceHistoryManager.RecordBatteryLevel(deviceInfo.Id, devName, batteryLevel, isConnected, connType);
+                        
                         // 更新最低电量显示
                         UpdateLowestBatteryDisplay();
                     }
@@ -624,7 +672,7 @@ namespace BluetoothBatteryUI
             });
         }
 
-        private void ScanButton_Click(object sender, RoutedEventArgs e)
+        private async void ScanButton_Click(object sender, RoutedEventArgs e)
         {
             if (isScanning)
             {
@@ -633,13 +681,29 @@ namespace BluetoothBatteryUI
             else
             {
                 StartScanning();
+                // 等待扫描完成后刷新电量
+                await Task.Delay(3000);
+                if (deviceCards.Count > 0 && !isScanning)
+                {
+                    StartRefreshAnimation();
+                    await RefreshAllBatteryLevelsAsync();
+                }
             }
         }
 
         private async void RefreshBattery_Click(object sender, RoutedEventArgs e)
         {
+            if (isRefreshing) return;  // 防止重复点击
+            
+            isRefreshing = true;
+            RefreshBatteryButton.IsEnabled = false;
             StartRefreshAnimation();
+            
             await RefreshAllBatteryLevelsAsync();
+            
+            StopRefreshAnimation();
+            RefreshBatteryButton.IsEnabled = true;
+            isRefreshing = false;
         }
 
         private void StartScanAnimation()
@@ -670,26 +734,16 @@ namespace BluetoothBatteryUI
 
         private void StartRefreshAnimation()
         {
-            var animation = new DoubleAnimation
-            {
-                From = 0,
-                To = 360,
-                Duration = new Duration(TimeSpan.FromSeconds(1)),
-                RepeatBehavior = RepeatBehavior.Forever
-            };
-
-            BatteryRingRotate?.BeginAnimation(RotateTransform.AngleProperty, animation);
-            
-            // Dim opacity of the rotating group for feedback
-            if (BatteryOuterGroup != null) BatteryOuterGroup.Opacity = 0.6;
+            // Dim the battery icon during refresh
+            if (BatteryBody != null) BatteryBody.Opacity = 0.5;
+            if (BatteryTerminal != null) BatteryTerminal.Opacity = 0.5;
         }
 
         private void StopRefreshAnimation()
         {
-            BatteryRingRotate?.BeginAnimation(RotateTransform.AngleProperty, null);
-            
             // Restore opacity
-            if (BatteryOuterGroup != null) BatteryOuterGroup.Opacity = 1.0;
+            if (BatteryBody != null) BatteryBody.Opacity = 1.0;
+            if (BatteryTerminal != null) BatteryTerminal.Opacity = 1.0;
         }
 
         private void UpdateLowestBatteryDisplay()
@@ -796,6 +850,120 @@ namespace BluetoothBatteryUI
             var stack = (StackPanel)EmptyState.Child;
             ((TextBlock)stack.Children[1]).Text = title;
             ((TextBlock)stack.Children[2]).Text = subtitle;
+        }
+
+        // 自动刷新功能
+        private void InitializeAutoRefresh()
+        {
+            if (!settings.EnableAutoRefresh)
+            {
+                Logger.Log("自动刷新已禁用");
+                return;
+            }
+
+            // 启动时立即执行一次扫描和刷新
+            Dispatcher.InvokeAsync(async () =>
+            {
+                StartScanning();
+                // 等待扫描完成后刷新电量
+                await Task.Delay(3000);
+                if (deviceCards.Count > 0)
+                {
+                    StartRefreshAnimation();
+                    await RefreshAllBatteryLevelsAsync();
+                }
+            });
+
+            // 设置定时器
+            int intervalMs = settings.AutoRefreshIntervalMinutes * 60 * 1000;
+            autoRefreshTimer = new System.Threading.Timer(
+                AutoRefreshCallback,
+                null,
+                intervalMs,
+                intervalMs
+            );
+
+            Logger.Log($"自动刷新已启用，间隔: {settings.AutoRefreshIntervalMinutes} 分钟");
+        }
+
+        private void AutoRefreshCallback(object? state)
+        {
+            Dispatcher.InvokeAsync(async () =>
+            {
+                if (deviceCards.Count > 0)
+                {
+                    Logger.Log("执行自动刷新");
+                    StartRefreshAnimation();
+                    await RefreshAllBatteryLevelsAsync();
+                }
+            });
+        }
+
+        private void StopAutoRefresh()
+        {
+            if (autoRefreshTimer != null)
+            {
+                autoRefreshTimer.Dispose();
+                autoRefreshTimer = null;
+                Logger.Log("自动刷新已停止");
+            }
+        }
+
+        private void RestartAutoRefresh()
+        {
+            StopAutoRefresh();
+            InitializeAutoRefresh();
+        }
+
+        private string DetectConnectionType(DeviceInformation deviceInfo)
+        {
+            try
+            {
+                // 检查设备名称中的关键字
+                string deviceName = deviceInfo.Name?.ToLower() ?? "";
+                
+                // 2.4G 设备通常在名称中包含这些关键字
+                if (deviceName.Contains("2.4g") || deviceName.Contains("2.4ghz") || 
+                    deviceName.Contains("wireless") || deviceName.Contains("dongle"))
+                {
+                    return "2.4G";
+                }
+                
+                // 通过 Bluetooth LE API 访问的设备
+                if (deviceInfo.Id.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "蓝牙";
+                }
+                
+                // 默认返回蓝牙（因为我们主要扫描蓝牙设备）
+                return "蓝牙";
+            }
+            catch
+            {
+                return "未知";
+            }
+        }
+
+        private void OpenDeviceDetails(string deviceId)
+        {
+            if (!deviceCards.ContainsKey(deviceId))
+                return;
+
+            string deviceName = deviceNames.ContainsKey(deviceId) ? deviceNames[deviceId] : "未命名设备";
+            int batteryLevel = deviceBatteryLevels.ContainsKey(deviceId) ? deviceBatteryLevels[deviceId] : 0;
+            string connectionType = deviceConnectionTypes.ContainsKey(deviceId) ? deviceConnectionTypes[deviceId] : "未知";
+
+            var detailsWindow = new DeviceDetailsWindow(deviceId, deviceName, batteryLevel, connectionType);
+            detailsWindow.Owner = this;
+            detailsWindow.ShowDialog();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            
+            // 保存历史数据
+            DeviceHistoryManager.SaveHistory();
         }
     }
 }
