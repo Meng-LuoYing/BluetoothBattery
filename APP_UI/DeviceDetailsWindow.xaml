@@ -185,11 +185,6 @@
                                            Text="R65 5.0"
                                            FontSize="18"
                                            FontWeight="SemiBold"/>
-                                <TextBlock x:Name="DeviceStatusText"
-                                           Text="LINKED"
-                                           Foreground="#7DD3FC"
-                                           FontSize="12"
-                                           Margin="0,4,0,0"/>
                             </StackPanel>
 
                             <!-- 电量圆环 -->
