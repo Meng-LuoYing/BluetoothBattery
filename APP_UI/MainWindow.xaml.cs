@@ -43,19 +43,7 @@ namespace BluetoothBatteryUI
         }
 
 
-        private void ScanButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (isScanning)
-            {
-                StopScanning();
-                StopScanAnimation();
-            }
-            else
-            {
-                StartScanning();
-                StartScanAnimation();
-            }
-        }
+
 
         private void ConnectedOnlyCheckBox_Changed(object sender, RoutedEventArgs e)
         {
@@ -70,17 +58,14 @@ namespace BluetoothBatteryUI
         }
 
 
-        private void RefreshBattery_Click(object sender, RoutedEventArgs e)
-        {
-            StartRefreshAnimation();
-            _ = RefreshAllBatteryLevelsAsync();
-        }
+
 
         private async Task RefreshAllBatteryLevelsAsync()
         {
             if (deviceCards.Count == 0)
             {
                 UpdateStatus("没有设备需要刷新", Colors.Orange);
+                StopRefreshAnimation();
                 return;
             }
 
@@ -265,6 +250,7 @@ namespace BluetoothBatteryUI
             try
             {
                 isScanning = true;
+                StartScanAnimation();
                 UpdateStatus("正在扫描蓝牙设备...", Colors.Orange);
                 
                 // 清空设备列表和缓存
@@ -638,6 +624,74 @@ namespace BluetoothBatteryUI
             });
         }
 
+        private void ScanButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (isScanning)
+            {
+                StopScanning();
+            }
+            else
+            {
+                StartScanning();
+            }
+        }
+
+        private async void RefreshBattery_Click(object sender, RoutedEventArgs e)
+        {
+            StartRefreshAnimation();
+            await RefreshAllBatteryLevelsAsync();
+        }
+
+        private void StartScanAnimation()
+        {
+            if (ScanRotate != null)
+            {
+                var animation = new DoubleAnimation
+                {
+                    From = 0,
+                    To = 360,
+                    Duration = new Duration(TimeSpan.FromSeconds(1)),
+                    RepeatBehavior = RepeatBehavior.Forever
+                };
+                ScanRotate.BeginAnimation(RotateTransform.AngleProperty, animation);
+                
+                // Dim opacity for feedback
+                if (ScanIconPath != null)
+                    ScanIconPath.Opacity = 0.6;
+            }
+        }
+
+        private void StopScanAnimation()
+        {
+            ScanRotate?.BeginAnimation(RotateTransform.AngleProperty, null);
+            if (ScanIconPath != null)
+                ScanIconPath.Opacity = 1.0;
+        }
+
+        private void StartRefreshAnimation()
+        {
+            var animation = new DoubleAnimation
+            {
+                From = 0,
+                To = 360,
+                Duration = new Duration(TimeSpan.FromSeconds(1)),
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+
+            BatteryRingRotate?.BeginAnimation(RotateTransform.AngleProperty, animation);
+            
+            // Dim opacity of the rotating group for feedback
+            if (BatteryOuterGroup != null) BatteryOuterGroup.Opacity = 0.6;
+        }
+
+        private void StopRefreshAnimation()
+        {
+            BatteryRingRotate?.BeginAnimation(RotateTransform.AngleProperty, null);
+            
+            // Restore opacity
+            if (BatteryOuterGroup != null) BatteryOuterGroup.Opacity = 1.0;
+        }
+
         private void UpdateLowestBatteryDisplay()
         {
             if (deviceBatteryLevels.Count == 0)
@@ -743,144 +797,6 @@ namespace BluetoothBatteryUI
             ((TextBlock)stack.Children[1]).Text = title;
             ((TextBlock)stack.Children[2]).Text = subtitle;
         }
-
-        // 动画相关方法
-        private void StartScanAnimation()
-        {
-            try
-            {
-                var button = ScanIconButton;
-                if (button == null) return;
-                
-                var template = button.Template;
-                if (template == null) return;
-                
-                var border = template.FindName("border", button) as Border;
-                var rotateTransform = template.FindName("ScanRotate", button) as RotateTransform;
-
-                if (rotateTransform != null)
-                {
-                    // 创建旋转动画
-                    var animation = new DoubleAnimation
-                    {
-                        From = 0,
-                        To = 360,
-                        Duration = TimeSpan.FromSeconds(1.5),
-                        RepeatBehavior = RepeatBehavior.Forever
-                    };
-                    rotateTransform.BeginAnimation(RotateTransform.AngleProperty, animation);
-                }
-
-                // 改变按钮颜色为灰色
-                if (border != null)
-                {
-                    border.Background = new SolidColorBrush(Color.FromRgb(100, 100, 100));
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"启动扫描动画失败: {ex.Message}");
-            }
-        }
-
-        private void StopScanAnimation()
-        {
-            try
-            {
-                var button = ScanIconButton;
-                if (button == null) return;
-                
-                var template = button.Template;
-                if (template == null) return;
-                
-                var border = template.FindName("border", button) as Border;
-                var rotateTransform = template.FindName("ScanRotate", button) as RotateTransform;
-
-                if (rotateTransform != null)
-                {
-                    rotateTransform.BeginAnimation(RotateTransform.AngleProperty, null);
-                    rotateTransform.Angle = 0;
-                }
-
-                // 恢复按钮颜色
-                if (border != null)
-                {
-                    border.Background = new SolidColorBrush(Color.FromRgb(0, 122, 204));
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"停止扫描动画失败: {ex.Message}");
-            }
-        }
-
-        private void StartRefreshAnimation()
-        {
-            try
-            {
-                var button = RefreshBatteryButton;
-                if (button == null) return;
-                
-                var template = button.Template;
-                if (template == null) return;
-                
-                var border = template.FindName("border", button) as Border;
-                var rotateTransform = template.FindName("RefreshRotate", button) as RotateTransform;
-
-                if (rotateTransform != null)
-                {
-                    // 创建旋转动画
-                    var animation = new DoubleAnimation
-                    {
-                        From = 0,
-                        To = 360,
-                        Duration = TimeSpan.FromSeconds(1),
-                        RepeatBehavior = RepeatBehavior.Forever
-                    };
-                    rotateTransform.BeginAnimation(RotateTransform.AngleProperty, animation);
-                }
-
-                // 改变按钮颜色为灰色
-                if (border != null)
-                {
-                    border.Background = new SolidColorBrush(Color.FromRgb(100, 100, 100));
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"启动刷新动画失败: {ex.Message}");
-            }
-        }
-
-        private void StopRefreshAnimation()
-        {
-            try
-            {
-                var button = RefreshBatteryButton;
-                if (button == null) return;
-                
-                var template = button.Template;
-                if (template == null) return;
-                
-                var border = template.FindName("border", button) as Border;
-                var rotateTransform = template.FindName("RefreshRotate", button) as RotateTransform;
-
-                if (rotateTransform != null)
-                {
-                    rotateTransform.BeginAnimation(RotateTransform.AngleProperty, null);
-                    rotateTransform.Angle = 0;
-                }
-
-                // 恢复按钮颜色
-                if (border != null)
-                {
-                    border.Background = new SolidColorBrush(Color.FromRgb(45, 45, 48));
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"停止刷新动画失败: {ex.Message}");
-            }
-        }
     }
 }
+

@@ -112,131 +112,122 @@
                             Orientation="Horizontal" 
                             VerticalAlignment="Center"
                             Margin="0,0,20,0">
-                    <!-- 扫描设备按钮 -->
+                    <StackPanel.Resources>
+                        <!-- 旋转动画资源 -->
+                        <Storyboard x:Key="SpinAnimation">
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                             From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever"/>
+                        </Storyboard>
+                        
+                        <!-- 按钮基础样式 -->
+                        <Style x:Key="IconButtonStyle" TargetType="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Width" Value="40"/>
+                            <Setter Property="Height" Value="40"/>
+                            <Setter Property="Margin" Value="0,0,8,0"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.8"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" Value="0.6"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Resources>
+
+                    <!-- 1. 扫描/刷新设备按钮 -->
                     <Button x:Name="ScanIconButton"
                             ToolTip="扫描设备"
-                            Width="50"
-                            Height="50"
-                            Margin="0,0,8,0"
-                            Background="#007ACC"
-                            BorderThickness="0"
-                            Cursor="Hand"
+                            Style="{StaticResource IconButtonStyle}"
                             Click="ScanButton_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}"
-                                        CornerRadius="8"
-                                        x:Name="border">
-                                    <TextBlock x:Name="ScanIcon" 
-                                               Text="🔍" 
-                                               FontSize="24"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               RenderTransformOrigin="0.5,0.5">
-                                        <TextBlock.RenderTransform>
-                                            <RotateTransform x:Name="ScanRotate" Angle="0"/>
-                                        </TextBlock.RenderTransform>
-                                    </TextBlock>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="border" Property="Background" Value="#1C97EA"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                        <Grid Width="24" Height="24">
+                            <!-- 替换为 Refresh.svg 的路径 -->
+                            <Path x:Name="ScanIconPath"
+                                  Data="M22.2754,10.1387c0.9615,1.439 1.4747,3.1307 1.4747,4.8613l-2.49,0c-0.219,0 -0.3396,0.2544 -0.201,0.4239l3.5682,4.3626c0.1039,0.127 0.2981,0.127 0.4019,0l3.5682,-4.3626c0.1387,-0.1695 0.0181,-0.4239 -0.2009,-0.4239l-2.3965,0c0,-0.5037 -0.0346,-1.0048 -0.1027,-1.5c-0.2263,-1.6434 -0.8223,-3.2212 -1.7511,-4.61127c-1.2087,-1.80894 -2.9267,-3.21884 -4.9367,-4.0514c-2.01,-0.83257 -4.2217,-1.05041 -6.3555,-0.62597c-2.1338,0.42444 -4.0938,1.47209 -5.63217,3.01047c-1.53838,1.53837 -2.58603,3.49837 -3.01047,5.63217c-0.42444,2.1338 -0.2066,4.3455 0.62597,6.3555c0.83256,2.01 2.24246,3.728 4.0514,4.9367c1.39007,0.9288 2.96787,1.5248 4.61127,1.7511c0.4952,0.0681 0.9963,0.1027 1.5,0.1027l0,-0.7499l0,-0.7501l0,-0.7499c-1.7306,0 -3.4223,-0.5132 -4.8613,-1.4747c-1.43892,-0.9615 -2.56043,-2.328 -3.22271,-3.9269c-0.66227,-1.5989 -0.83555,-3.3582 -0.49792,-5.0556c0.33762,-1.6973 1.17098,-3.2564 2.3947,-4.48013c1.22373,-1.22372 2.78283,-2.05708 4.48013,-2.3947c1.6974,-0.33763 3.4567,-0.16435 5.0556,0.49792c1.5989,0.66228 2.9654,1.78379 3.9269,3.22271z"
+                                  Fill="White"
+                                  Stretch="Uniform"
+                                  RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <RotateTransform x:Name="ScanRotate" Angle="0"/>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Grid>
                     </Button>
                     
-                    <!-- 刷新电量按钮 -->
+                    <!-- 2. 刷新电量按钮 -->
+                    <!-- 2. 刷新电量按钮 -->
                     <Button x:Name="RefreshBatteryButton"
                             ToolTip="刷新电量"
-                            Width="50"
-                            Height="50"
-                            Margin="0,0,8,0"
-                            Background="#2D2D30"
-                            BorderThickness="0"
-                            Cursor="Hand"
+                            Style="{StaticResource IconButtonStyle}"
                             Click="RefreshBattery_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}"
-                                        CornerRadius="8"
-                                        x:Name="border">
-                                    <TextBlock x:Name="RefreshIcon" 
-                                               Text="🔋" 
-                                               FontSize="24"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               RenderTransformOrigin="0.5,0.5">
-                                        <TextBlock.RenderTransform>
-                                            <RotateTransform x:Name="RefreshRotate" Angle="0"/>
-                                        </TextBlock.RenderTransform>
-                                    </TextBlock>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="border" Property="Background" Value="#3E3E42"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                        <Grid Width="24" Height="24">
+                            <!-- Rotating Group (Outer Ring) -->
+                            <!-- Using a 24x24 canvas directly for perfect centering -->
+                            <Grid x:Name="BatteryOuterGroup" Width="24" Height="24" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform>
+                                    <RotateTransform x:Name="BatteryRingRotate" Angle="0"/>
+                                </Grid.RenderTransform>
+                                
+                                <!-- Center is 12,12. Radius 9 (fits in 24x24 padding 3). -->
+                                <!-- Ring Path: Arc from (12, 3) to ... -->
+                                <!-- Split Ring with Arrows -->
+                                <Path Stroke="White" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Data="M 12,3 A 9,9 0 1 0 20.4,8.5 M 21,12 L 18,12 L 18,9
+                                            M 12,21 A 9,9 0 1 0 3.6,15.5 M 3,12 L 6,12 L 6,15"/>
+                            </Grid>
+                            
+
+                            <!-- Refined Battery Path: 
+                                 Body: Rect 8x12 centered.
+                                 Cap: Rect 4x2 on top.
+                            -->
+                             <Grid Width="10" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                 <!-- Cap -->
+                                 <Rectangle Width="4" Height="2" Fill="White" VerticalAlignment="Top" Margin="0,0,0,0"/>
+                                 <!-- Body -->
+                                 <Border BorderBrush="White" BorderThickness="1.5" Margin="0,3,0,0" CornerRadius="1"/>
+                                 <!-- Level (Full) -->
+                                 <Rectangle Fill="White" Margin="2,5,2,2"/>
+                             </Grid>
+                        </Grid>
                     </Button>
                     
-                    <!-- 隐藏设备按钮 -->
+                    <!-- 3. 隐藏设备按钮 -->
                     <Button x:Name="HiddenDevicesButton"
                             ToolTip="隐藏的设备"
-                            Width="50"
-                            Height="50"
-                            Margin="0,0,8,0"
-                            Background="#2D2D30"
-                            BorderThickness="0"
-                            Cursor="Hand"
+                            Style="{StaticResource IconButtonStyle}"
                             Click="HiddenDevices_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}"
-                                        CornerRadius="8"
-                                        x:Name="border">
-                                    <TextBlock Text="👁️" 
-                                               FontSize="24"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="border" Property="Background" Value="#3E3E42"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                        <Grid Width="24" Height="24">
+                             <!-- Hide.svg 路径 -->
+                            <Path Data="M12,4.5C7,4.5,2.73,7.61,1,12c1.73,4.39,6,7.5,11,7.5s9.27-3.11,11-7.5C21.27,7.61,17,4.5,12,4.5z M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5s5,2.24,5,5S14.76,17,12,17z M12,9c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3S13.66,9,12,9z"
+                                  Fill="White"
+                                  Stretch="Uniform"/>
+                        </Grid>
                     </Button>
                     
                     <!-- 设置按钮 -->
                     <Button x:Name="SettingsButton"
                             ToolTip="设置"
-                            Width="50"
-                            Height="50"
-                            Background="#2D2D30"
-                            BorderThickness="0"
-                            Cursor="Hand"
+                            Style="{StaticResource IconButtonStyle}"
                             Click="Settings_Click">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}"
-                                        CornerRadius="8"
-                                        x:Name="border">
-                                    <TextBlock Text="⚙️" 
-                                               FontSize="24"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="border" Property="Background" Value="#3E3E42"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
+                         <Grid Width="24" Height="24">
+                            <!-- Gear Path -->
+                            <Path Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                                  Fill="White"
+                                  Stretch="Uniform"/>
+                        </Grid>
                     </Button>
                 </StackPanel>
 
