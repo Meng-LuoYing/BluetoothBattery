@@ -404,8 +404,46 @@ namespace BluetoothBatteryUI
             // batteryPanel is index 2 in centerPanel (Name, ID, Battery)
             var batteryPanel = (StackPanel)centerPanel.Children[2];
             var batteryText = (TextBlock)batteryPanel.Children[0];
+            batteryText.Text = $"设备电量: {batteryLevel}%";
 
-            // ... 其余逻辑不变 ...
+            // 更新预估时间 (第3列, index 3 - 如果存在)
+            if (centerPanel.Children.Count > 3)
+            {
+                var remainingTimeText = (TextBlock)centerPanel.Children[3];
+                // 计算预估剩余时间
+                try
+                {
+                    double drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(24));
+                     if (drainRate <= 0)
+                    {
+                        // 尝试使用更短的时间范围
+                        drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(6));
+                    }
+
+                    if (drainRate > 0)
+                    {
+                        var hoursLeft = batteryLevel / drainRate;
+                        if (hoursLeft > 99)
+                        {
+                            remainingTimeText.Text = "预估剩余: >99小时";
+                        }
+                        else
+                        {
+                            int h = (int)hoursLeft;
+                            int m = (int)((hoursLeft - h) * 60);
+                            remainingTimeText.Text = h > 0 ? $"预估剩余: {h}小时 {m}分钟" : $"预估剩余: {m}分钟";
+                        }
+                    }
+                    else
+                    {
+                        remainingTimeText.Text = "预估剩余: --";
+                    }
+                }
+                catch
+                {
+                    remainingTimeText.Text = "预估剩余: --";
+                }
+            }
             
             // 更新颜色 (0-30 红, 30-70 黄, 70-100 绿)
             var color = batteryLevel >= 70 ? Color.FromRgb(76, 175, 80) :   // Green
@@ -930,6 +968,16 @@ namespace BluetoothBatteryUI
             };
             batteryPanel.Children.Add(batteryText);
             centerPanel.Children.Add(batteryPanel);
+
+            // 预估时间显示
+            var remainingTimeText = new TextBlock
+            {
+                Text = "预估剩余: --",
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128)), // Gray-500
+                Margin = new Thickness(0, 2, 0, 0)
+            };
+            centerPanel.Children.Add(remainingTimeText);
 
             Grid.SetColumn(centerPanel, 1);
             grid.Children.Add(centerPanel);
