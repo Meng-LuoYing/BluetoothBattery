@@ -100,12 +100,12 @@ namespace BluetoothBatteryReader
                 
                 if (characteristicsResult.Characteristics.Count == 0)
                 {
-                    Console.WriteLine("未找到电池电量特征");
+                    Console.WriteLine("未找到设备电量特征");
                     return -1;
                 }
                 
                 var batteryLevelCharacteristic = characteristicsResult.Characteristics[0];
-                Console.WriteLine("找到电池电量特征");
+                Console.WriteLine("找到设备电量特征");
                 
                 // 读取电池电量值
                 var readResult = await batteryLevelCharacteristic.ReadValueAsync();
@@ -120,12 +120,12 @@ namespace BluetoothBatteryReader
                 var reader = DataReader.FromBuffer(readResult.Value);
                 byte batteryLevel = reader.ReadByte();
                 
-                Console.WriteLine($"电池电量: {batteryLevel}%");
+                Console.WriteLine($"设备电量: {batteryLevel}%");
                 return batteryLevel;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"读取电池电量时出错: {ex.Message}");
+                Console.WriteLine($"读取设备电量时出错: {ex.Message}");
                 return -1;
             }
             finally
