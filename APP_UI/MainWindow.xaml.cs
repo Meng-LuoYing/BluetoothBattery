@@ -10,6 +10,7 @@ using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
 using BluetoothBatteryUI.Models;
+using WinForms = System.Windows.Forms;
 
 namespace BluetoothBatteryUI
 {
@@ -28,6 +29,7 @@ namespace BluetoothBatteryUI
         private AppSettings settings;
         private System.Threading.Timer? autoRefreshTimer;  // 自动刷新定时器
         private bool isRefreshing = false;  // 刷新状态标志
+        private WinForms.NotifyIcon? trayIcon;  // 系统托盘图标
 
         public MainWindow()
         {
@@ -45,8 +47,183 @@ namespace BluetoothBatteryUI
             
             Logger.Log("应用程序启动");
             
+            // 初始化系统托盘图标
+            InitializeTrayIcon();
+            
             // 初始化自动刷新
             InitializeAutoRefresh();
+        }
+
+        private void InitializeTrayIcon()
+        {
+            // 创建托盘图标
+            trayIcon = new WinForms.NotifyIcon
+            {
+                Icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Reflection.Assembly.GetExecutingAssembly().Location),
+                Visible = true,
+                Text = "蓝牙设备电量监控\n正在加载设备..."
+            };
+
+            // 创建右键菜单
+            var contextMenu = new WinForms.ContextMenuStrip();
+            
+            var showItem = new WinForms.ToolStripMenuItem("显示主窗口");
+            showItem.Click += (s, e) => ShowMainWindow();
+            contextMenu.Items.Add(showItem);
+            
+            contextMenu.Items.Add(new WinForms.ToolStripSeparator());
+            
+            var exitItem = new WinForms.ToolStripMenuItem("退出");
+            exitItem.Click += (s, e) => 
+            {
+                trayIcon.Visible = false;
+                System.Windows.Application.Current.Shutdown();
+            };
+            contextMenu.Items.Add(exitItem);
+            
+            trayIcon.ContextMenuStrip = contextMenu;
+            
+            // 双击托盘图标显示/隐藏窗口
+            trayIcon.DoubleClick += (s, e) => ShowMainWindow();
+            
+            // 监听窗口状态变化
+            this.StateChanged += MainWindow_StateChanged;
+        }
+
+        private void MainWindow_StateChanged(object? sender, EventArgs e)
+        {
+            // 最小化时隐藏到托盘
+            if (WindowState == WindowState.Minimized)
+            {
+                Hide();
+                if (trayIcon != null)
+                {
+                    trayIcon.ShowBalloonTip(2000, "蓝牙设备电量监控", "程序已最小化到系统托盘", WinForms.ToolTipIcon.Info);
+                }
+            }
+        }
+
+        private void ShowMainWindow()
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        private void UpdateTrayIconTooltip()
+        {
+            if (trayIcon == null) return;
+
+            // 只显示标记为"显示在托盘"的设备
+            var trayDevices = deviceBatteryLevels
+                .Where(kvp => settings.TrayIconDevices.Contains(kvp.Key))
+                .ToList();
+
+            // 构建设备列表文本
+            var tooltipText = new System.Text.StringBuilder();
+            tooltipText.AppendLine("蓝牙设备电量监控");
+            
+            if (trayDevices.Count == 0)
+            {
+                tooltipText.Append("暂无设备");
+            }
+            else
+            {
+                // 按电量从低到高排序
+                var sortedDevices = trayDevices
+                    .OrderBy(kvp => kvp.Value)
+                    .Take(5); // 最多显示5个设备（避免tooltip过长）
+                
+                foreach (var device in sortedDevices)
+                {
+                    string deviceName = deviceNames.ContainsKey(device.Key) 
+                        ? deviceNames[device.Key] 
+                        : "未知设备";
+                    tooltipText.AppendLine($"• {deviceName}: {device.Value}%");
+                }
+                
+                if (trayDevices.Count > 5)
+                {
+                    tooltipText.Append($"... 还有 {trayDevices.Count - 5} 个设备");
+                }
+            }
+
+            // Windows托盘图标tooltip有长度限制（63字符），需要截断
+            string finalText = tooltipText.ToString();
+            if (finalText.Length > 63)
+            {
+                finalText = finalText.Substring(0, 60) + "...";
+            }
+            
+            trayIcon.Text = finalText;
+            
+            // 更新图标显示最低电量（仅限托盘设备）
+            int? lowestBattery = trayDevices.Count > 0 
+                ? trayDevices.Min(kvp => kvp.Value) 
+                : (int?)null;
+            
+            var oldIcon = trayIcon.Icon;
+            trayIcon.Icon = CreateBatteryIcon(lowestBattery);
+            oldIcon?.Dispose(); // 释放旧图标资源
+        }
+
+        private System.Drawing.Icon CreateBatteryIcon(int? batteryLevel)
+        {
+            // 创建16x16的位图（托盘图标标准尺寸）
+            var bitmap = new System.Drawing.Bitmap(16, 16);
+            using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
+            {
+                graphics.Clear(System.Drawing.Color.Transparent);
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+
+                // 确定显示文本和颜色
+                string displayText;
+                System.Drawing.Color textColor;
+
+                if (batteryLevel.HasValue)
+                {
+                    displayText = batteryLevel.Value.ToString();
+                    
+                    // 根据电量设置颜色
+                    if (batteryLevel.Value >= 70)
+                        textColor = System.Drawing.Color.FromArgb(76, 175, 80); // Green
+                    else if (batteryLevel.Value >= 30)
+                        textColor = System.Drawing.Color.FromArgb(255, 152, 0); // Yellow/Orange
+                    else
+                        textColor = System.Drawing.Color.FromArgb(244, 67, 54); // Red
+                }
+                else
+                {
+                    displayText = "--";
+                    textColor = System.Drawing.Color.Gray;
+                }
+
+                // 绘制背景圆角矩形
+                var bgRect = new System.Drawing.Rectangle(0, 0, 15, 15);
+                using (var bgBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(45, 45, 48)))
+                {
+                    graphics.FillRectangle(bgBrush, bgRect);
+                }
+
+                // 绘制文本
+                using (var font = new System.Drawing.Font("Arial", displayText.Length > 2 ? 6 : 7, System.Drawing.FontStyle.Bold))
+                using (var brush = new System.Drawing.SolidBrush(textColor))
+                {
+                    var format = new System.Drawing.StringFormat
+                    {
+                        Alignment = System.Drawing.StringAlignment.Center,
+                        LineAlignment = System.Drawing.StringAlignment.Center
+                    };
+                    graphics.DrawString(displayText, font, brush, new System.Drawing.RectangleF(0, 0, 16, 16), format);
+                }
+            }
+
+            // 转换为Icon
+            IntPtr hIcon = bitmap.GetHicon();
+            System.Drawing.Icon icon = System.Drawing.Icon.FromHandle(hIcon);
+            
+            return icon;
         }
 
 
@@ -242,6 +419,9 @@ namespace BluetoothBatteryUI
             
             progressBar.Foreground = colorBrush;
             batteryPercentText.Foreground = colorBrush;
+            
+            // 更新托盘图标提示
+            UpdateTrayIconTooltip();
         }
 
         private void HiddenDevices_Click(object sender, RoutedEventArgs e)
@@ -1098,6 +1278,13 @@ namespace BluetoothBatteryUI
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
+            
+            // 清理托盘图标
+            if (trayIcon != null)
+            {
+                trayIcon.Visible = false;
+                trayIcon.Dispose();
+            }
             
             // 保存历史数据
             DeviceHistoryManager.SaveHistory();
