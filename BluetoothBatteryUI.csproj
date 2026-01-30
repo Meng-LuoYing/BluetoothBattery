@@ -10,4 +10,12 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ApplicationDefinition Include="APP_UI\App.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </ApplicationDefinition>
+    <Page Remove="APP_UI\App.xaml" />
+  </ItemGroup>
+
 </Project>
