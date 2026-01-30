@@ -7,6 +7,7 @@
         Title="蓝牙设备电量监控" Height="600" Width="900"
         WindowStartupLocation="CenterScreen"
         Icon="/Images/BluetoothIcon.png"
+        Closing="Window_Closing"
         Background="#1E1E1E">
 
     <Window.Resources>

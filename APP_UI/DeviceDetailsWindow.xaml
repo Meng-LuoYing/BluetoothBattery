@@ -324,7 +324,7 @@
                 BorderBrush="#1F2937"
                 BorderThickness="1">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <TextBlock Text="⚡ 平均续航：" Foreground="#9CA3AF"/>
+                <TextBlock Text="⚡ 预估续航：" Foreground="#9CA3AF"/>
                 <TextBlock x:Name="AverageDrainText" Text="--" FontWeight="SemiBold"/>
                 <TextBlock Text="    🔗 连接方式：" Foreground="#9CA3AF" Margin="20,0,0,0"/>
                 <TextBlock x:Name="ConnectionTypeText" Text="蓝牙" FontWeight="SemiBold"/>

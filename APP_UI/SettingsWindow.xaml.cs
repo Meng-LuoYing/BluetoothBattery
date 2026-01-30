@@ -23,7 +23,7 @@ namespace BluetoothBatteryUI
             EnableAlertCheckBox.IsChecked = settings.EnableLowBatteryAlert;
             UseToastCheckBox.IsChecked = settings.UseToastNotification;
             StartupCheckBox.IsChecked = settings.StartWithWindows;
-            StartMinimizedCheckBox.IsChecked = settings.StartMinimized;
+            MinimizeToTrayCheckBox.IsChecked = settings.MinimizeToTray;
             DetailedLoggingCheckBox.IsChecked = settings.DetailedLogging;
         }
 
@@ -96,7 +96,7 @@ namespace BluetoothBatteryUI
                 settings.EnableLowBatteryAlert = EnableAlertCheckBox.IsChecked ?? false;
                 settings.UseToastNotification = UseToastCheckBox.IsChecked ?? false;
                 settings.StartWithWindows = StartupCheckBox.IsChecked ?? false;
-                settings.StartMinimized = StartMinimizedCheckBox.IsChecked ?? false;
+                settings.MinimizeToTray = MinimizeToTrayCheckBox.IsChecked ?? false;
                 settings.DetailedLogging = DetailedLoggingCheckBox.IsChecked ?? false;
 
                 // 应用开机自启动设置

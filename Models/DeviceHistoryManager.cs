@@ -168,25 +168,31 @@ namespace BluetoothBatteryUI.Models
             if (connectedRecords.Count < 2)
                 return 0;
 
-            int totalDrain = 0;
-            int drainCount = 0;
+            double totalDrop = 0;
+            double totalHours = 0;
 
             for (int i = 1; i < connectedRecords.Count; i++)
             {
                 var timeDiff = connectedRecords[i].Timestamp - connectedRecords[i - 1].Timestamp;
                 var batteryDiff = connectedRecords[i - 1].BatteryLevel - connectedRecords[i].BatteryLevel;
 
-                // 只统计合理的数据(时间间隔小于1小时,电量下降)
-                if (timeDiff.TotalHours < 1 && timeDiff.TotalMinutes > 1 && batteryDiff > 0)
+                // 只统计合理的数据(时间间隔小于1小时)
+                // 忽略充电过程 (batteryDiff < 0)，只计算放电和待机(batteryDiff >= 0)
+                if (timeDiff.TotalHours < 1)
                 {
-                    // 计算每小时的电量消耗
-                    double drainPerHour = batteryDiff / timeDiff.TotalHours;
-                    totalDrain += (int)drainPerHour;
-                    drainCount++;
+                    if (batteryDiff >= 0)
+                    {
+                        totalDrop += batteryDiff;
+                        totalHours += timeDiff.TotalHours;
+                    }
+                    // 如果是充电过程，我们需要忽略这段时间，不计入放电时长
                 }
             }
 
-            return drainCount > 0 ? (double)totalDrain / drainCount : 0;
+            // 防止除以零
+            if (totalHours < 0.1) return 0;
+
+            return totalDrop / totalHours;
         }
 
         /// <summary>

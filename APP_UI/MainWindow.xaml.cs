@@ -488,6 +488,11 @@ namespace BluetoothBatteryUI
         {
             var settingsWindow = new SettingsWindow(settings);
             settingsWindow.Owner = this;
+            
+            // 保存旧的阈值 (在显示对话框前保存，因为对象是引用传递，对话框内修改会影响当前对象)
+            int oldThreshold = settings.LowBatteryThreshold;
+            bool oldEnableAlert = settings.EnableLowBatteryAlert;
+            
             if (settingsWindow.ShowDialog() == true)
             {
                 // 设置已保存，重新加载
@@ -495,6 +500,26 @@ namespace BluetoothBatteryUI
                 Logger.SetDetailedLogging(settings.DetailedLogging);
                 Logger.Log("设置已更新");
                 
+                // 如果阈值或提醒开关改变，立即重新检查所有设备
+                if (settings.LowBatteryThreshold != oldThreshold || settings.EnableLowBatteryAlert != oldEnableAlert)
+                {
+                    // 如果从禁用变为启用，或者阈值改变，清除已提醒列表，以便重新评估
+                    // (可选：如果不清除，已经提醒过的设备可能不会再次提醒，但这通常符合预期)
+                    // 但为了响应用户"我每次修改过设置中的阈值，都要重新判定"，我们应该强制允许再次提醒
+                    if (settings.LowBatteryThreshold != oldThreshold) 
+                    {
+                        settings.AlertedDevices.Clear();
+                        SettingsManager.SaveSettings(settings); // 保存清除后的状态
+                        Logger.Log("低电量阈值改变，重置已提醒列表");
+                    }
+
+                    // 重新检查所有已知设备的电量
+                    foreach (var kvp in deviceBatteryLevels)
+                    {
+                        CheckLowBattery(kvp.Key, kvp.Value);
+                    }
+                }
+
                 // 重启自动刷新定时器
                 RestartAutoRefresh();
             }
@@ -503,7 +528,20 @@ namespace BluetoothBatteryUI
         private void CheckLowBattery(string deviceId, int batteryLevel)
         {
             if (!settings.EnableLowBatteryAlert) return;
-            if (batteryLevel > settings.LowBatteryThreshold) return;
+            
+            // 如果电量高于阈值，从已提醒列表中移除（允许再次提醒）
+            if (batteryLevel > settings.LowBatteryThreshold)
+            {
+                if (settings.AlertedDevices.Contains(deviceId))
+                {
+                    settings.AlertedDevices.Remove(deviceId);
+                    SettingsManager.SaveSettings(settings);
+                    Logger.Log($"设备 {deviceId} 电量恢复，移出提醒列表", true);
+                }
+                return;
+            }
+            
+            // 如果已经提醒过，不再重复提醒
             if (settings.AlertedDevices.Contains(deviceId)) return;
 
             string deviceName = deviceNames.ContainsKey(deviceId) ? deviceNames[deviceId] : "未知设备";
@@ -532,13 +570,20 @@ namespace BluetoothBatteryUI
         {
             try
             {
-                // 简单的系统托盘通知（Windows 10/11）
+                // 系统托盘通知（Windows 10/11 会显示为通知横幅）
                 var notificationTitle = "蓝牙设备低电量";
                 var notificationMessage = $"{deviceName} 电量仅剩 {batteryLevel}%";
                 
-                // 使用 MessageBox 作为备选方案
-                MessageBox.Show(notificationMessage, notificationTitle, 
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                if (trayIcon != null && trayIcon.Visible)
+                {
+                    trayIcon.ShowBalloonTip(5000, notificationTitle, notificationMessage, WinForms.ToolTipIcon.Warning);
+                }
+                else
+                {
+                    // 如果托盘图标不可见，回退到 MessageBox
+                     MessageBox.Show(notificationMessage, notificationTitle, 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             catch (Exception ex)
             {
@@ -1302,6 +1347,17 @@ namespace BluetoothBatteryUI
             var detailsWindow = new DeviceDetailsWindow(deviceId, deviceName, batteryLevel, connectionType);
             detailsWindow.Owner = this;
             detailsWindow.ShowDialog();
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // 如果启用了启动最小化功能，点击关闭按钮时最小化到托盘而不是退出
+            if (settings.MinimizeToTray)
+            {
+                e.Cancel = true;
+                this.WindowState = WindowState.Minimized;
+                Logger.Log("窗口最小化到托盘");
+            }
         }
 
         protected override void OnClosed(EventArgs e)

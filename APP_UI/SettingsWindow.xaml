@@ -222,17 +222,19 @@
                               Style="{StaticResource ToggleSwitch}"/>
                 </Grid>
 
+
+
                 <Grid Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
-                    <TextBlock Text="启动最小化" 
+                    <TextBlock Text="关闭时最小化到托盘" 
                                Foreground="#AAAAAA" 
                                FontSize="14"
                                VerticalAlignment="Center"/>
-                    <CheckBox x:Name="StartMinimizedCheckBox"
+                    <CheckBox x:Name="MinimizeToTrayCheckBox"
                               Grid.Column="1"
                               Style="{StaticResource ToggleSwitch}"/>
                 </Grid>

@@ -14,6 +14,7 @@ namespace BluetoothBatteryUI
         // 系统设置
         public bool StartWithWindows { get; set; } = false;
         public bool StartMinimized { get; set; } = false;
+        public bool MinimizeToTray { get; set; } = false;
         public bool DetailedLogging { get; set; } = false;
         
         // 隐藏设备列表
