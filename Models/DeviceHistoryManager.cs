@@ -202,13 +202,38 @@ namespace BluetoothBatteryUI.Models
                 return "-";
 
             var latest = records[records.Count - 1];
-            var previous = records[records.Count - 2];
+            
+            // 向前查找最近一次电量不一样的记录
+            // 我们需要找到当前电量值的起始时间点
+            for (int i = records.Count - 2; i >= 0; i--)
+            {
+                var record = records[i];
+                if (record.BatteryLevel != latest.BatteryLevel)
+                {
+                    // 找到了上一个不同的电量，那么 record 的下一个记录就是变化的时刻
+                    var changeRecord = records[i + 1];
+                    var diff = DateTime.Now - changeRecord.Timestamp;
 
-            int change = latest.BatteryLevel - previous.BatteryLevel;
-            if (change == 0)
-                return "无变化";
+                    if (diff.TotalMinutes < 1)
+                    {
+                        return "刚刚";
+                    }
+                    else if (diff.TotalHours < 1)
+                    {
+                        return $"{(int)diff.TotalMinutes}分钟前";
+                    }
+                    else if (diff.TotalHours < 24)
+                    {
+                        return $"{(int)diff.TotalHours}小时前";
+                    }
+                    else
+                    {
+                        return $"{(int)diff.TotalDays}天前";
+                    }
+                }
+            }
 
-            return change > 0 ? $"+{change}%" : $"{change}%";
+            return "无变化";
         }
 
         /// <summary>

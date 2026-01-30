@@ -119,11 +119,63 @@ namespace BluetoothBatteryUI
             var usageTime = DeviceHistoryManager.CalculateUsageTime(deviceId, TimeSpan.FromHours(24));
             UsageTimeText.Text = $"{(int)usageTime.TotalHours}h {usageTime.Minutes}m";
 
-            // 计算平均续航
-            var avgDrain = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(selectedTimeRange));
-            if (avgDrain > 0)
+            // 计算平均续航（估算剩余时间）
+            // 1. 优先尝试使用24小时内的平均消耗率（更稳定）
+            var drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(24));
+            
+            // 2. 如果无效，尝试使用当前时间范围
+            if (drainRate <= 0)
             {
-                AverageDrainText.Text = $"{avgDrain:F1}%/h";
+                drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(selectedTimeRange));
+            }
+            
+            // 3. 如果还是无效，尝试简单的线性计算 (总掉电量 / 总时间)
+            if (drainRate <= 0)
+            {
+                var rangeRecs = DeviceHistoryManager.GetRecordsInRange(deviceId, TimeSpan.FromHours(24));
+                if (rangeRecs.Count >= 2)
+                {
+                    var first = rangeRecs.First();
+                    var last = rangeRecs.Last();
+                    var totalHours = (last.Timestamp - first.Timestamp).TotalHours;
+                    var totalDrop = first.BatteryLevel - last.BatteryLevel;
+                    
+                    if (totalHours > 0.1 && totalDrop > 0)
+                    {
+                        drainRate = totalDrop / totalHours;
+                    }
+                }
+            }
+
+            if (drainRate > 0)
+            {
+                // 获取当前电量
+                int batteryPercentage = 0;
+                if (history.BatteryRecords.Count > 0)
+                {
+                    batteryPercentage = history.BatteryRecords.Last().BatteryLevel;
+                }
+
+                // 计算剩余时间 = 当前电量 / 消耗率
+                if (batteryPercentage > 0)
+                {
+                    var hoursLeft = batteryPercentage / drainRate;
+                    
+                    if (hoursLeft > 99)
+                    {
+                        AverageDrainText.Text = ">99h";
+                    }
+                    else
+                    {
+                        int h = (int)hoursLeft;
+                        int m = (int)((hoursLeft - h) * 60);
+                        AverageDrainText.Text = h > 0 ? $"{h}h {m}m" : $"{m}m";
+                    }
+                }
+                else
+                {
+                     AverageDrainText.Text = "--";
+                }
             }
             else
             {
@@ -143,7 +195,6 @@ namespace BluetoothBatteryUI
             NoDataText.Visibility = Visibility.Collapsed;
 
             var records = DeviceHistoryManager.GetRecordsInRange(deviceId, TimeSpan.FromHours(selectedTimeRange));
-            this.currentRecords = records; // 保存记录供Tooltip使用
             
             if (records.Count < 2)
             {
@@ -159,17 +210,31 @@ namespace BluetoothBatteryUI
             var plotW = Math.Max(1, width - padding.Left - padding.Right);
             var plotH = Math.Max(1, height - padding.Top - padding.Bottom);
 
-            // 计算时间轴范围 - 向上取整到下一个整点
+            // 计算时间轴范围 - 向上取整到下一个整点（用于显示标签）
             var currentTime = records.Last().Timestamp;
             var axisMaxT = RoundUpToInterval(currentTime, selectedTimeRange);
             var axisMinT = axisMaxT.AddHours(-selectedTimeRange);
+            
+            // 计算数据范围 - 向下取整到上一个整点（用于数据终点）
+            var dataMaxT = RoundDownToInterval(currentTime, selectedTimeRange);
+            
+            // 过滤数据：只保留到dataMaxT的数据（不采样，保留所有原始数据点）
+            var filteredRecords = records.Where(r => r.Timestamp >= axisMinT && r.Timestamp <= dataMaxT).ToList();
+            
+            // 保存过滤后的记录供Tooltip使用
+            this.currentRecords = filteredRecords;
+            
+            // 保存时间轴范围供Tooltip使用
+            this.currentAxisMinT = axisMinT;
+            this.currentAxisMaxT = axisMaxT;
+            
             var axisTotalSeconds = Math.Max(1, (axisMaxT - axisMinT).TotalSeconds);
 
             // 绘制网格和坐标轴
             DrawGrid(width, height, padding, plotW, plotH, axisMinT, axisMaxT);
 
-            // 绘制趋势线
-            DrawTrendLine(records, padding, plotW, plotH, axisMinT, axisTotalSeconds);
+            // 绘制趋势线（使用过滤后的所有数据点）
+            DrawTrendLine(filteredRecords, padding, plotW, plotH, axisMinT, axisTotalSeconds);
 
             // 绘制时间轴标签
             DrawTimeLabels(padding, plotW, plotH, axisMinT, axisMaxT);
@@ -217,9 +282,62 @@ namespace BluetoothBatteryUI
             }
         }
 
-        // 图表边距设置 (优化后的 Thickness 系统)
-        private readonly Thickness chartPadding = new Thickness(56, 18, 18, 25);
+        // 向下取整到最近的间隔点（用于数据采样终点）
+        private static DateTime RoundDownToInterval(DateTime currentTime, int timeRangeHours)
+        {
+            if (timeRangeHours <= 1)
+            {
+                // 1小时：向下取整到10分钟
+                var minute = (currentTime.Minute / 10) * 10;
+                return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, minute, 0);
+            }
+            else if (timeRangeHours <= 6)
+            {
+                // 6小时：向下取整到30分钟
+                var minute = currentTime.Minute < 30 ? 0 : 30;
+                return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, minute, 0);
+            }
+            else
+            {
+                // 24小时：向下取整到整点
+                return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, 0, 0);
+            }
+        }
+
+        // 均匀采样数据点
+        private List<BatteryRecord> SampleRecordsEvenly(List<BatteryRecord> records, DateTime minT, DateTime maxT, int sampleCount)
+        {
+            if (records.Count == 0) return new List<BatteryRecord>();
+            if (records.Count <= sampleCount) return records;
+
+            var sampledRecords = new List<BatteryRecord>();
+            var totalSeconds = (maxT - minT).TotalSeconds;
+            var interval = totalSeconds / (sampleCount - 1);
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                var targetTime = minT.AddSeconds(interval * i);
+                
+                // 找到最接近目标时间的记录
+                var closestRecord = records
+                    .Where(r => r.Timestamp >= minT && r.Timestamp <= maxT)
+                    .OrderBy(r => Math.Abs((r.Timestamp - targetTime).TotalSeconds))
+                    .FirstOrDefault();
+
+                if (closestRecord != null && !sampledRecords.Contains(closestRecord))
+                {
+                    sampledRecords.Add(closestRecord);
+                }
+            }
+
+            return sampledRecords.OrderBy(r => r.Timestamp).ToList();
+        }
+
+        // 图表边距设置 (优化后的 Thickness 系统) - 底部间距缩小为5，标签绘制在Canvas外部
+        private readonly Thickness chartPadding = new Thickness(56, 18, 18, 5);
         private List<BatteryRecord> currentRecords;
+        private DateTime currentAxisMinT; // 当前时间轴最小值
+        private DateTime currentAxisMaxT; // 当前时间轴最大值
 
         private void DrawGrid(double width, double height, Thickness padding, double plotW, double plotH, DateTime minT, DateTime maxT)
         {
@@ -377,7 +495,7 @@ namespace BluetoothBatteryUI
                     left = padding.Left + plotW - label.DesiredSize.Width;
                 
                 Canvas.SetLeft(label, left);
-                Canvas.SetTop(label, padding.Top + plotH + 6);
+                Canvas.SetTop(label, padding.Top + plotH + 8); // 标签向下移动，利用Border的Padding区域
                 ChartCanvas.Children.Add(label);
             }
         }
@@ -420,11 +538,12 @@ namespace BluetoothBatteryUI
                 return;
             }
 
-            // 计算鼠标位置对应的时间
+            // 计算鼠标位置对应的时间比例
             double xRatio = (mousePos.X - padding.Left) / plotW;
             
-            DateTime viewEndTime = currentRecords.Last().Timestamp;
-            DateTime viewStartTime = viewEndTime.AddHours(-selectedTimeRange);
+            // 使用保存的时间轴范围（而不是从记录计算）
+            DateTime viewStartTime = currentAxisMinT;
+            DateTime viewEndTime = currentAxisMaxT;
             TimeSpan viewDuration = viewEndTime - viewStartTime;
 
             DateTime hoveredTime = viewStartTime.AddSeconds(xRatio * viewDuration.TotalSeconds);

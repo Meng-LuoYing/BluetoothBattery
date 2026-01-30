@@ -33,7 +33,7 @@ namespace BluetoothBatteryReader
                 // 查找所有设备
                 var devices = await DeviceInformation.FindAllAsync(selector, requestedProperties);
                 
-                Console.WriteLine($"找到 {devices.Count} 个蓝牙设备:");
+                Console.WriteLine($"搜索到 {devices.Count} 个蓝牙设备:");
                 foreach (var device in devices)
                 {
                     Console.WriteLine($"  - {device.Name} (ID: {device.Id})");
