@@ -200,7 +200,8 @@ namespace BluetoothBatteryUI
                 }
 
                 // 绘制文本（无背景，只显示数字）
-                using (var font = new System.Drawing.Font("Arial", displayText.Length > 2 ? 7 : 8, System.Drawing.FontStyle.Bold))
+                // 字号修正：Segoe UI 需要更小的字号才能放入16x16，使用 7f 适合两位数，6f 适合三位数
+                using (var font = new System.Drawing.Font("Microsoft Sans Serif", displayText.Length > 2 ? 7 : 8, System.Drawing.FontStyle.Regular))
                 using (var brush = new System.Drawing.SolidBrush(textColor))
                 {
                     var format = new System.Drawing.StringFormat
@@ -399,6 +400,15 @@ namespace BluetoothBatteryUI
             batteryPercentText.Text = $"{batteryLevel}%";
             progressBar.Value = batteryLevel;
             
+            // 立即更新颜色 (0-30 红, 30-70 黄, 70-100 绿)
+            var color = batteryLevel >= 70 ? Color.FromRgb(76, 175, 80) :   // Green
+                       batteryLevel >= 30 ? Color.FromRgb(255, 152, 0) :   // Yellow
+                       Color.FromRgb(244, 67, 54);                         // Red
+            var colorBrush = new SolidColorBrush(color);
+            
+            progressBar.Foreground = colorBrush;
+            batteryPercentText.Foreground = colorBrush;
+
             // 更新左侧(中间)的电池文本 (第1列, index 1)
             var centerPanel = (StackPanel)grid.Children[1];
             // batteryPanel is index 2 in centerPanel (Name, ID, Battery)
@@ -444,15 +454,6 @@ namespace BluetoothBatteryUI
                     remainingTimeText.Text = "预估剩余: --";
                 }
             }
-            
-            // 更新颜色 (0-30 红, 30-70 黄, 70-100 绿)
-            var color = batteryLevel >= 70 ? Color.FromRgb(76, 175, 80) :   // Green
-                       batteryLevel >= 30 ? Color.FromRgb(255, 152, 0) :   // Yellow
-                       Color.FromRgb(244, 67, 54);                         // Red
-            var colorBrush = new SolidColorBrush(color);
-            
-            progressBar.Foreground = colorBrush;
-            batteryPercentText.Foreground = colorBrush;
             
             // 更新托盘图标提示
             UpdateTrayIconTooltip();
@@ -1010,6 +1011,56 @@ namespace BluetoothBatteryUI
             };
             rightPanel.Children.Add(progressBar);
 
+            // 优先使用内存缓存，其次尝试读取历史记录缓存
+            int initialLevel = -1;
+            if (deviceBatteryLevels.ContainsKey(deviceInfo.Id))
+            {
+                initialLevel = deviceBatteryLevels[deviceInfo.Id];
+            }
+            else
+            {
+                var history = DeviceHistoryManager.GetDeviceHistory(deviceInfo.Id);
+                if (history != null && history.BatteryRecords.Count > 0)
+                {
+                    initialLevel = history.BatteryRecords.Last().BatteryLevel;
+                    // 同时更新到内存缓存中，避免重复读取
+                    deviceBatteryLevels[deviceInfo.Id] = initialLevel;
+                }
+            }
+
+            // 如果找到了初始电量数据，立即显示
+            if (initialLevel >= 0)
+            {
+                batteryPercentText.Text = $"{initialLevel}%";
+                progressBar.Value = initialLevel;
+                
+                // 设置颜色
+                var color = initialLevel >= 70 ? Color.FromRgb(76, 175, 80) :   // Green
+                           initialLevel >= 30 ? Color.FromRgb(255, 152, 0) :   // Yellow
+                           Color.FromRgb(244, 67, 54);                  // Red
+                
+                var brush = new SolidColorBrush(color);
+                batteryPercentText.Foreground = brush;
+                progressBar.Foreground = brush;
+                
+                batteryText.Text = $"设备电量: {initialLevel}%";
+
+                // 尝试计算预估时间 (如果有历史记录)
+                try {
+                     double drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceInfo.Id, TimeSpan.FromHours(24));
+                     if (drainRate > 0) {
+                        var hoursLeft = initialLevel / drainRate;
+                         if (hoursLeft > 99) {
+                            remainingTimeText.Text = "预估剩余: >99小时";
+                        } else {
+                            int h = (int)hoursLeft;
+                            int m = (int)((hoursLeft - h) * 60);
+                            remainingTimeText.Text = h > 0 ? $"预估剩余: {h}小时 {m}分钟" : $"预估剩余: {m}分钟";
+                        }
+                     }
+                } catch {}
+            }
+
             Grid.SetColumn(rightPanel, 2);
             grid.Children.Add(rightPanel);
 
@@ -1219,15 +1270,15 @@ namespace BluetoothBatteryUI
 
         private async Task<int> ReadBatteryLevelAsync(string deviceId)
         {
-            // 添加超时机制 (5秒)
+            // 添加超时机制 (10秒)
             var task = ReadBatteryLevelCoreAsync(deviceId);
-            if (await Task.WhenAny(task, Task.Delay(5000)) == task)
+            if (await Task.WhenAny(task, Task.Delay(10000)) == task)
             {
                 return await task;
             }
             else
             {
-                Logger.Log($"读取设备 {deviceId} 电量超时");
+                Logger.Log($"读取设备 {deviceId} 电量超时 (超过10秒)");
                 return -1;
             }
         }
@@ -1243,25 +1294,35 @@ namespace BluetoothBatteryUI
 
                 var servicesResult = await device.GetGattServicesForUuidAsync(BatteryServiceUuid);
                 if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
+                {
+                    Logger.Log($"获取GattServices失败: {servicesResult.Status}", true);
                     return -1;
+                }
 
                 var batteryService = servicesResult.Services[0];
                 var characteristicsResult = await batteryService.GetCharacteristicsForUuidAsync(BatteryLevelCharacteristicUuid);
 
                 if (characteristicsResult.Status != GattCommunicationStatus.Success || characteristicsResult.Characteristics.Count == 0)
+                {
+                    Logger.Log($"获取Characteristics失败: {characteristicsResult.Status}", true);
                     return -1;
+                }
 
                 var batteryLevelCharacteristic = characteristicsResult.Characteristics[0];
                 var readResult = await batteryLevelCharacteristic.ReadValueAsync();
 
                 if (readResult.Status != GattCommunicationStatus.Success)
+                {
+                    Logger.Log($"读取特征值失败: {readResult.Status}", true);
                     return -1;
+                }
 
                 var reader = Windows.Storage.Streams.DataReader.FromBuffer(readResult.Value);
                 return reader.ReadByte();
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Log($"读取电量发生异常: {ex.Message}");
                 return -1;
             }
             finally
