@@ -1,0 +1,72 @@
+<Window x:Class="BluetoothBatteryUI.RenameDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="重命名设备" Height="200" Width="350"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#252526"
+        WindowStyle="None"
+        AllowsTransparency="True">
+
+    <Window.Resources>
+        <Style x:Key="DialogButton" TargetType="Button">
+            <Setter Property="Background" Value="#3E3E42"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,6"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#505055"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderThickness="1" BorderBrush="#3F3F46" CornerRadius="8" Background="#252526">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="重命名设备" 
+                       Foreground="White" 
+                       FontSize="16" 
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,15"/>
+
+            <StackPanel Grid.Row="1">
+                <TextBlock Text="输入新的名称:" Foreground="#AAAAAA" Margin="0,0,0,5"/>
+                <TextBox x:Name="NameTextBox"
+                         Height="30"
+                         Background="#1E1E1E"
+                         Foreground="White"
+                         BorderThickness="1"
+                         BorderBrush="#3F3F46"
+                         Padding="5"
+                         VerticalContentAlignment="Center"/>
+                <TextBlock Text="留空以恢复默认名称" 
+                           Foreground="#666666" 
+                           FontSize="11" 
+                           Margin="0,5,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                <Button Content="取消" Click="Cancel_Click" Style="{StaticResource DialogButton}"/>
+                <Button Content="确定" Click="Ok_Click" Background="#0078D4" Style="{StaticResource DialogButton}"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

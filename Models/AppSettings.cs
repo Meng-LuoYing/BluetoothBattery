@@ -25,5 +25,10 @@ namespace BluetoothBatteryUI
         // 自动刷新设置
         public bool EnableAutoRefresh { get; set; } = true;
         public int AutoRefreshIntervalMinutes { get; set; } = 5;
+
+        // 自定义设置
+        public Dictionary<string, string> DeviceAliases { get; set; } = new Dictionary<string, string>(); // 设备别名
+        public Dictionary<string, string> DeviceIcons { get; set; } = new Dictionary<string, string>();   // 设备图标路径或预设名
+        public HashSet<string> TrayIconDevices { get; set; } = new HashSet<string>();                     // 显示在托盘的设备
     }
 }

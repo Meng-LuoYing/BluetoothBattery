@@ -54,39 +54,48 @@ namespace BluetoothBatteryUI
             double radius = 31; // (74 - 6*2) / 2
             double centerX = 37; // 74 / 2
             double centerY = 37;
-            double angle = (percentage / 100.0) * 360;
-            
-            // 转换为弧度
-            double startAngle = -90; // 从顶部开始
-            double endAngle = startAngle + angle;
-            
-            double startRad = startAngle * Math.PI / 180;
-            double endRad = endAngle * Math.PI / 180;
-            
-            Point startPoint = new Point(
-                centerX + radius * Math.Cos(startRad),
-                centerY + radius * Math.Sin(startRad)
-            );
-            
-            Point endPoint = new Point(
-                centerX + radius * Math.Cos(endRad),
-                centerY + radius * Math.Sin(endRad)
-            );
-            
-            bool isLargeArc = angle > 180;
-            
-            var pathGeometry = new PathGeometry();
-            var pathFigure = new PathFigure { StartPoint = startPoint };
-            pathFigure.Segments.Add(new ArcSegment
+
+            if (percentage >= 100)
             {
-                Point = endPoint,
-                Size = new Size(radius, radius),
-                SweepDirection = SweepDirection.Clockwise,
-                IsLargeArc = isLargeArc
-            });
-            pathGeometry.Figures.Add(pathFigure);
-            
-            BatteryArc.Data = pathGeometry;
+                // 如果是100%，直接绘制完整圆形
+                BatteryArc.Data = new EllipseGeometry(new Point(centerX, centerY), radius, radius);
+            }
+            else
+            {
+                double angle = (percentage / 100.0) * 360;
+                
+                // 转换为弧度
+                double startAngle = -90; // 从顶部开始
+                double endAngle = startAngle + angle;
+                
+                double startRad = startAngle * Math.PI / 180;
+                double endRad = endAngle * Math.PI / 180;
+                
+                Point startPoint = new Point(
+                    centerX + radius * Math.Cos(startRad),
+                    centerY + radius * Math.Sin(startRad)
+                );
+                
+                Point endPoint = new Point(
+                    centerX + radius * Math.Cos(endRad),
+                    centerY + radius * Math.Sin(endRad)
+                );
+                
+                bool isLargeArc = angle > 180;
+                
+                var pathGeometry = new PathGeometry();
+                var pathFigure = new PathFigure { StartPoint = startPoint };
+                pathFigure.Segments.Add(new ArcSegment
+                {
+                    Point = endPoint,
+                    Size = new Size(radius, radius),
+                    SweepDirection = SweepDirection.Clockwise,
+                    IsLargeArc = isLargeArc
+                });
+                pathGeometry.Figures.Add(pathFigure);
+                
+                BatteryArc.Data = pathGeometry;
+            }
             
             // 根据电量设置颜色：0-30红色，30-70黄色，70-100绿色
             if (percentage <= 30)

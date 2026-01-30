@@ -123,6 +123,56 @@ namespace BluetoothBatteryUI
             }
         }
 
+        private void RenameDevice_Click(string deviceId, string currentName)
+        {
+            var dialog = new RenameDialog(currentName);
+            dialog.Owner = this;
+            if (dialog.ShowDialog() == true)
+            {
+                var newName = dialog.NewName;
+                if (string.IsNullOrWhiteSpace(newName))
+                {
+                    settings.DeviceAliases.Remove(deviceId);
+                }
+                else
+                {
+                    settings.DeviceAliases[deviceId] = newName;
+                }
+                SettingsManager.SaveSettings(settings);
+                
+                // 刷新界面 (简单起见，重新扫描)
+                StartScanning();
+            }
+        }
+
+        private void ChangeIcon_Click(string deviceId)
+        {
+            var currentIcon = settings.DeviceIcons.ContainsKey(deviceId) ? settings.DeviceIcons[deviceId] : null;
+            var dialog = new IconPickerDialog(currentIcon);
+            dialog.Owner = this;
+            if (dialog.ShowDialog() == true)
+            {
+                settings.DeviceIcons[deviceId] = dialog.SelectedIcon;
+                SettingsManager.SaveSettings(settings);
+                
+                // 刷新界面
+                StartScanning();
+            }
+        }
+
+        private void ToggleTray_Click(string deviceId, MenuItem item)
+        {
+            if (item.IsChecked)
+            {
+                settings.TrayIconDevices.Add(deviceId);
+            }
+            else
+            {
+                settings.TrayIconDevices.Remove(deviceId);
+            }
+            SettingsManager.SaveSettings(settings);
+        }
+
         private void UpdateDeviceCardBattery(string deviceId, int batteryLevel)
         {
             if (!deviceCards.ContainsKey(deviceId)) return;
@@ -130,13 +180,21 @@ namespace BluetoothBatteryUI
             var card = deviceCards[deviceId];
             var grid = (Grid)card.Child;
             
-            // 更新右侧电量显示
-            var rightPanel = (StackPanel)grid.Children[1];
+            // 更新右侧电量显示 (现在是第2列, index 2)
+            var rightPanel = (StackPanel)grid.Children[2];
             var batteryPercentText = (TextBlock)rightPanel.Children[0];
             var progressBar = (ProgressBar)rightPanel.Children[1];
             
             batteryPercentText.Text = $"{batteryLevel}%";
             progressBar.Value = batteryLevel;
+            
+            // 更新左侧(中间)的电池文本 (第1列, index 1)
+            var centerPanel = (StackPanel)grid.Children[1];
+            // batteryPanel is index 2 in centerPanel (Name, ID, Battery)
+            var batteryPanel = (StackPanel)centerPanel.Children[2];
+            var batteryText = (TextBlock)batteryPanel.Children[0];
+
+            // ... 其余逻辑不变 ...
             
             // 更新颜色
             var color = batteryLevel > 50 ? Color.FromRgb(76, 175, 80) :
@@ -158,6 +216,22 @@ namespace BluetoothBatteryUI
         {
             // 如果正在扫描，设备会自动重新出现
             Logger.Log($"设备 {deviceId} 已从隐藏列表中恢复");
+            
+            // 立即触发一次重新扫描以显示恢复的设备
+            if (!isScanning)
+            {
+                StartScanning();
+                
+                // 3秒后刷新电量
+                Dispatcher.InvokeAsync(async () =>
+                {
+                    await Task.Delay(3000);
+                    if (deviceCards.Count > 0)
+                    {
+                        await RefreshAllBatteryLevelsAsync();
+                    }
+                });
+            }
         }
 
         private void Settings_Click(object sender, RoutedEventArgs e)
@@ -428,9 +502,11 @@ namespace BluetoothBatteryUI
             // 检查连接状态
             bool isConnected = await IsDeviceConnectedAsync(deviceInfo);
             
-            // 记录设备名称
-            string devName = string.IsNullOrWhiteSpace(deviceInfo.Name) ? "未命名设备" : deviceInfo.Name;
-            deviceNames[deviceInfo.Id] = devName;
+            // 获取显示名称 (优先使用别名)
+            string originalName = string.IsNullOrWhiteSpace(deviceInfo.Name) ? "未命名设备" : deviceInfo.Name;
+            string displayName = settings.DeviceAliases.ContainsKey(deviceInfo.Id) ? settings.DeviceAliases[deviceInfo.Id] : originalName;
+            
+            deviceNames[deviceInfo.Id] = displayName;
             
             // 检测连接类型
             string connectionType = DetectConnectionType(deviceInfo);
@@ -440,28 +516,57 @@ namespace BluetoothBatteryUI
             var card = new Border
             {
                 Style = (Style)FindResource("DeviceCard"),
-                Opacity = 0
+                Opacity = 0,
+                Tag = deviceInfo.Id // 存储ID供右键菜单使用
             };
 
+            // 创建右键菜单
+            var contextMenu = new ContextMenu();
+            
+            var renameItem = new MenuItem { Header = "重命名", Icon = new TextBlock { Text = "\uE8AC", FontFamily = new FontFamily("Segoe MDL2 Assets") } };
+            renameItem.Click += (s, e) => RenameDevice_Click(deviceInfo.Id, displayName);
+            contextMenu.Items.Add(renameItem);
+
+            var iconItem = new MenuItem { Header = "自定义图标", Icon = new TextBlock { Text = "\uEB9F", FontFamily = new FontFamily("Segoe MDL2 Assets") } };
+            iconItem.Click += (s, e) => ChangeIcon_Click(deviceInfo.Id);
+            contextMenu.Items.Add(iconItem);
+
+            var trayItem = new MenuItem { Header = "显示在托盘", IsCheckable = true, IsChecked = settings.TrayIconDevices.Contains(deviceInfo.Id) };
+            trayItem.Click += (s, e) => ToggleTray_Click(deviceInfo.Id, trayItem);
+            contextMenu.Items.Add(trayItem);
+
+            card.ContextMenu = contextMenu;
+
             var grid = new Grid();
+            // 0: 图标, 1: 信息, 2: 电量条
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            // 左侧：设备信息
-            var leftPanel = new StackPanel();
+            // 0. 设备图标
+            var iconElement = DeviceIconManager.GetIconForDevice(deviceInfo.Id, originalName, settings);
+            if (iconElement is UIElement uiIcon)
+            {
+                 Grid.SetColumn(uiIcon, 0);
+                 grid.Children.Add(uiIcon);
+            }
+
+            // 1. 中间：设备信息
+            var centerPanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
 
             // 设备名称和连接状态
             var namePanel = new StackPanel { Orientation = Orientation.Horizontal };
             
-            var deviceName = new TextBlock
+            var deviceNameBlock = new TextBlock
             {
-                Text = devName,
+                Text = displayName,
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = originalName != displayName ? $"原名: {originalName}" : null
             };
-            namePanel.Children.Add(deviceName);
+            namePanel.Children.Add(deviceNameBlock);
             
             // 连接状态标签
             var statusBadge = new Border
@@ -503,7 +608,7 @@ namespace BluetoothBatteryUI
             connectionTypeBadge.Child = connectionTypeText;
             namePanel.Children.Add(connectionTypeBadge);
             
-            // 隐藏按钮
+            // 隐藏按钮 (移到右键菜单可能更好，但保留以便快速访问)
             var hideButton = new Button
             {
                 Content = "隐藏",
@@ -518,50 +623,40 @@ namespace BluetoothBatteryUI
             };
             hideButton.Click += (s, e) => HideDevice(deviceInfo.Id);
             namePanel.Children.Add(hideButton);
-
             
-            leftPanel.Children.Add(namePanel);
-            leftPanel.Children.Add(new TextBlock { Height = 8 }); // 间距
-
-            var deviceId = new TextBlock
+            centerPanel.Children.Add(namePanel);
+            
+            // ID 显示
+            var deviceIdBlock = new TextBlock
             {
                 Text = $"ID: {deviceInfo.Id.Substring(Math.Max(0, deviceInfo.Id.Length - 20))}",
                 FontSize = 12,
                 Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170)),
-                Margin = new Thickness(0, 0, 0, 12)
+                Margin = new Thickness(0, 4, 0, 0)
             };
-            leftPanel.Children.Add(deviceId);
+            centerPanel.Children.Add(deviceIdBlock);
 
-            // 电池信息容器
-            var batteryPanel = new StackPanel { Orientation = Orientation.Horizontal };
-            var batteryIcon = new TextBlock
-            {
-                Text = "🔋",
-                FontSize = 16,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
-            batteryPanel.Children.Add(batteryIcon);
-
+            // 电池信息文本 (移除了大的电池图标，因为左侧已有主图标)
+            var batteryPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
             var batteryText = new TextBlock
             {
                 Text = "正在读取...",
-                FontSize = 14,
+                FontSize = 13,
                 Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170)),
                 VerticalAlignment = VerticalAlignment.Center
             };
             batteryPanel.Children.Add(batteryText);
+            centerPanel.Children.Add(batteryPanel);
 
-            leftPanel.Children.Add(batteryPanel);
+            Grid.SetColumn(centerPanel, 1);
+            grid.Children.Add(centerPanel);
 
-            Grid.SetColumn(leftPanel, 0);
-            grid.Children.Add(leftPanel);
-
-            // 右侧：电池电量可视化
+            // 2. 右侧：电池电量可视化
             var rightPanel = new StackPanel
             {
                 Width = 200,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right
             };
 
             var batteryPercentText = new TextBlock
@@ -584,7 +679,7 @@ namespace BluetoothBatteryUI
             };
             rightPanel.Children.Add(progressBar);
 
-            Grid.SetColumn(rightPanel, 1);
+            Grid.SetColumn(rightPanel, 2);
             grid.Children.Add(rightPanel);
 
             card.Child = grid;
@@ -762,8 +857,10 @@ namespace BluetoothBatteryUI
             // 获取设备名称
             var deviceCard = deviceCards[lowestDeviceId];
             var grid = (Grid)deviceCard.Child;
-            var leftPanel = (StackPanel)grid.Children[0];
-            var namePanel = (StackPanel)leftPanel.Children[0];
+            // 0: Icon, 1: Info (StackPanel), 2: Battery
+            var centerPanel = (StackPanel)grid.Children[1];
+            // centerPanel children: 0: NamePanel(StackPanel), 1: ID(TextBlock), 2: BatteryInfo(StackPanel)
+            var namePanel = (StackPanel)centerPanel.Children[0];
             var deviceNameBlock = (TextBlock)namePanel.Children[0];
             var deviceName = deviceNameBlock.Text;
 
