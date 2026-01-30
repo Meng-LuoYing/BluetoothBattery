@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="BluetoothIcon.png" />
+    <Resource Include="Images\BluetoothIcon.png" />
   </ItemGroup>
 
 </Project>

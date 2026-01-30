@@ -185,13 +185,13 @@ namespace BluetoothBatteryUI
                 {
                     displayText = batteryLevel.Value.ToString();
                     
-                    // 根据电量设置颜色
+                    // 根据电量设置颜色 (0-30红色, 30-70黄色, 70-100绿色)
                     if (batteryLevel.Value >= 70)
-                        textColor = System.Drawing.Color.FromArgb(76, 175, 80); // Green
+                        textColor = System.Drawing.Color.FromArgb(76, 175, 80); // Green (70-100)
                     else if (batteryLevel.Value >= 30)
-                        textColor = System.Drawing.Color.FromArgb(255, 152, 0); // Yellow/Orange
+                        textColor = System.Drawing.Color.FromArgb(255, 152, 0); // Yellow/Orange (30-70)
                     else
-                        textColor = System.Drawing.Color.FromArgb(244, 67, 54); // Red
+                        textColor = System.Drawing.Color.FromArgb(244, 67, 54); // Red (0-30)
                 }
                 else
                 {
@@ -199,15 +199,8 @@ namespace BluetoothBatteryUI
                     textColor = System.Drawing.Color.Gray;
                 }
 
-                // 绘制背景圆角矩形
-                var bgRect = new System.Drawing.Rectangle(0, 0, 15, 15);
-                using (var bgBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(45, 45, 48)))
-                {
-                    graphics.FillRectangle(bgBrush, bgRect);
-                }
-
-                // 绘制文本
-                using (var font = new System.Drawing.Font("Arial", displayText.Length > 2 ? 6 : 7, System.Drawing.FontStyle.Bold))
+                // 绘制文本（无背景，只显示数字）
+                using (var font = new System.Drawing.Font("Arial", displayText.Length > 2 ? 7 : 8, System.Drawing.FontStyle.Bold))
                 using (var brush = new System.Drawing.SolidBrush(textColor))
                 {
                     var format = new System.Drawing.StringFormat
