@@ -18,4 +18,8 @@
     <Page Remove="APP_UI\App.xaml" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="BluetoothIcon.png" />
+  </ItemGroup>
+
 </Project>

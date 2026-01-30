@@ -6,6 +6,7 @@
         mc:Ignorable="d"
         Title="蓝牙设备电量监控" Height="600" Width="900"
         WindowStartupLocation="CenterScreen"
+        Icon="/BluetoothIcon.png"
         Background="#1E1E1E">
 
     <Window.Resources>
