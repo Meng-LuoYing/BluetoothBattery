@@ -27,7 +27,6 @@ namespace BluetoothBatteryUI
             
             // 设置设备信息
             DeviceNameText.Text = deviceName;
-            DeviceStatusText.Text = "LINKED";
             BatteryPercentText.Text = $"{batteryLevel}%";
             ConnectionTypeText.Text = connectionType;
             
@@ -89,16 +88,21 @@ namespace BluetoothBatteryUI
             
             BatteryArc.Data = pathGeometry;
             
-            // 根据电量设置颜色
-            if (percentage <= 20)
+            // 根据电量设置颜色：0-30红色，30-70黄色，70-100绿色
+            if (percentage <= 30)
             {
                 BatteryArc.Stroke = new SolidColorBrush(Color.FromRgb(239, 68, 68)); // 红色
                 BatteryPercentText.Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68));
             }
+            else if (percentage <= 70)
+            {
+                BatteryArc.Stroke = new SolidColorBrush(Color.FromRgb(250, 204, 21)); // 黄色
+                BatteryPercentText.Foreground = new SolidColorBrush(Color.FromRgb(250, 204, 21));
+            }
             else
             {
-                BatteryArc.Stroke = new SolidColorBrush(Color.FromRgb(34, 211, 238)); // 青色
-                BatteryPercentText.Foreground = new SolidColorBrush(Color.FromRgb(34, 211, 238));
+                BatteryArc.Stroke = new SolidColorBrush(Color.FromRgb(34, 197, 94)); // 绿色
+                BatteryPercentText.Foreground = new SolidColorBrush(Color.FromRgb(34, 197, 94));
             }
         }
 
@@ -111,8 +115,8 @@ namespace BluetoothBatteryUI
                 return;
             }
 
-            // 计算使用时长
-            var usageTime = DeviceHistoryManager.CalculateUsageTime(deviceId, TimeSpan.FromHours(selectedTimeRange));
+            // 计算使用时长（固定24小时窗口）
+            var usageTime = DeviceHistoryManager.CalculateUsageTime(deviceId, TimeSpan.FromHours(24));
             UsageTimeText.Text = $"{(int)usageTime.TotalHours}h {usageTime.Minutes}m";
 
             // 计算平均续航
@@ -150,41 +154,89 @@ namespace BluetoothBatteryUI
             double width = ChartCanvas.ActualWidth > 0 ? ChartCanvas.ActualWidth : 600;
             double height = ChartCanvas.ActualHeight > 0 ? ChartCanvas.ActualHeight : 250;
 
-            // 绘制网格线
-            DrawGrid(width, height);
+            // 使用参考项目的 Thickness 边距系统
+            var padding = chartPadding;
+            var plotW = Math.Max(1, width - padding.Left - padding.Right);
+            var plotH = Math.Max(1, height - padding.Top - padding.Bottom);
+
+            // 计算时间轴范围 - 向上取整到下一个整点
+            var currentTime = records.Last().Timestamp;
+            var axisMaxT = RoundUpToInterval(currentTime, selectedTimeRange);
+            var axisMinT = axisMaxT.AddHours(-selectedTimeRange);
+            var axisTotalSeconds = Math.Max(1, (axisMaxT - axisMinT).TotalSeconds);
+
+            // 绘制网格和坐标轴
+            DrawGrid(width, height, padding, plotW, plotH, axisMinT, axisMaxT);
 
             // 绘制趋势线
-            DrawTrendLine(records, width, height);
+            DrawTrendLine(records, padding, plotW, plotH, axisMinT, axisTotalSeconds);
 
-            // 更新时间标签
-            DrawTimeLabels(records, width, height);
+            // 绘制时间轴标签
+            DrawTimeLabels(padding, plotW, plotH, axisMinT, axisMaxT);
         }
 
-        // 图表内边距设置
-        private const double PaddingLeft = 35;
-        private const double PaddingRight = 25;
-        private const double PaddingTop = 15;
-        private const double PaddingBottom = 15;
-
-        private void DrawGrid(double width, double height)
+        // 向上取整到下一个间隔点
+        private static DateTime RoundUpToInterval(DateTime currentTime, int timeRangeHours)
         {
-            double availableWidth = width - PaddingLeft - PaddingRight;
-            double availableHeight = height - PaddingTop - PaddingBottom;
-            
-            // 水平网格线 (0-100, 每10一个刻度)
+            if (timeRangeHours <= 1)
+            {
+                // 1小时：向上取整到下一个10分钟
+                var minute = currentTime.Minute;
+                var roundedMinute = ((minute / 10) + 1) * 10;
+                if (roundedMinute >= 60)
+                {
+                    return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, 0, 0).AddHours(1);
+                }
+                return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, roundedMinute, 0);
+            }
+            else if (timeRangeHours <= 6)
+            {
+                // 6小时：向上取整到下一个30分钟
+                var minute = currentTime.Minute;
+                if (minute == 0)
+                {
+                    return currentTime; // 已经是整点
+                }
+                else if (minute <= 30)
+                {
+                    return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, 30, 0);
+                }
+                else
+                {
+                    return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, 0, 0).AddHours(1);
+                }
+            }
+            else
+            {
+                // 24小时：向上取整到下一个整点
+                if (currentTime.Minute == 0 && currentTime.Second == 0)
+                {
+                    return currentTime; // 已经是整点
+                }
+                return new DateTime(currentTime.Year, currentTime.Month, currentTime.Day, currentTime.Hour, 0, 0).AddHours(1);
+            }
+        }
+
+        // 图表边距设置 (优化后的 Thickness 系统)
+        private readonly Thickness chartPadding = new Thickness(56, 18, 18, 25);
+        private List<BatteryRecord> currentRecords;
+
+        private void DrawGrid(double width, double height, Thickness padding, double plotW, double plotH, DateTime minT, DateTime maxT)
+        {
+            var gridBrush = new SolidColorBrush(Color.FromArgb(60, 148, 163, 184));
+
+            // 绘制水平网格线 (Y轴: 0-100)
             for (int i = 0; i <= 10; i++)
             {
-                double val = i * 10;
-                // 计算Y坐标
-                double y = PaddingTop + availableHeight - (val / 100.0 * availableHeight);
+                double y = padding.Top + i / 10.0 * plotH;
                 
                 var line = new Line
                 {
-                    X1 = PaddingLeft,
+                    X1 = padding.Left,
+                    X2 = padding.Left + plotW,
                     Y1 = y,
-                    X2 = width - PaddingRight,
                     Y2 = y,
-                    Stroke = new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+                    Stroke = gridBrush,
                     StrokeThickness = 1
                 };
                 ChartCanvas.Children.Add(line);
@@ -192,42 +244,44 @@ namespace BluetoothBatteryUI
                 // Y轴标签
                 var label = new TextBlock
                 {
-                    Text = val.ToString(),
-                    Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)),
-                    FontSize = 10,
-                    TextAlignment = TextAlignment.Right,
-                    Width = 30 // 固定宽度以便右对齐
+                    Text = (100 - i * 10).ToString(),
+                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    FontSize = 11
                 };
-                
-                // 标签位置：放在左侧内边距区域
-                Canvas.SetLeft(label, PaddingLeft - 35); 
-                Canvas.SetTop(label, y - 7); 
+                Canvas.SetLeft(label, padding.Left - 45); // 靠近图表左边缘
+                Canvas.SetTop(label, y - 8);
                 ChartCanvas.Children.Add(label);
             }
+
+            // 绘制边框
+            var border = new Rectangle
+            {
+                Width = plotW,
+                Height = plotH,
+                Stroke = new SolidColorBrush(Color.FromArgb(80, 34, 211, 238)),
+                StrokeThickness = 1
+            };
+            Canvas.SetLeft(border, padding.Left);
+            Canvas.SetTop(border, padding.Top);
+            ChartCanvas.Children.Add(border);
         }
 
-        private void DrawTrendLine(List<BatteryRecord> records, double width, double height)
+        private void DrawTrendLine(List<BatteryRecord> records, Thickness padding, double plotW, double plotH, DateTime axisMinT, double axisTotalSeconds)
         {
             var points = new PointCollection();
-
-            if (records.Count == 0) return;
-
-            DateTime viewEndTime = records.Last().Timestamp;
-            DateTime viewStartTime = viewEndTime.AddHours(-selectedTimeRange);
-            TimeSpan viewDuration = viewEndTime - viewStartTime;
-
-            double availableWidth = width - PaddingLeft - PaddingRight;
-            double availableHeight = height - PaddingTop - PaddingBottom;
 
             foreach (var record in records)
             {
                 // 计算X坐标
-                double timeRatio = (record.Timestamp - viewStartTime).TotalSeconds / viewDuration.TotalSeconds;
-                double x = PaddingLeft + (timeRatio * availableWidth);
-                
-                // 计算Y坐标
-                double y = PaddingTop + availableHeight - (record.BatteryLevel / 100.0 * availableHeight);
-                
+                var xRatio = (record.Timestamp - axisMinT).TotalSeconds / axisTotalSeconds;
+                if (xRatio < 0) xRatio = 0;
+                if (xRatio > 1) xRatio = 1;
+                var x = padding.Left + xRatio * plotW;
+
+                // 计算Y坐标 (0-100范围)
+                var percent = Math.Clamp(record.BatteryLevel, 0, 100);
+                var y = padding.Top + (1 - percent / 100.0) * plotH;
+
                 points.Add(new Point(x, y));
             }
 
@@ -239,30 +293,112 @@ namespace BluetoothBatteryUI
                 StrokeThickness = 2,
                 StrokeLineJoin = PenLineJoin.Round
             };
-
             ChartCanvas.Children.Add(polyline);
 
-            // 绘制数据点
-            foreach (var point in points)
+            // 绘制最后一个数据点
+            if (points.Count > 0)
             {
-                // 只在绘制区域内绘制点
-                if (point.X >= PaddingLeft - 2 && point.X <= width - PaddingRight + 2)
-                {
-                    var ellipse = new Ellipse
-                    {
-                        Width = 6,
-                        Height = 6,
-                        Fill = new SolidColorBrush(Color.FromRgb(34, 211, 238))
-                    };
-                    Canvas.SetLeft(ellipse, point.X - 3);
-                    Canvas.SetTop(ellipse, point.Y - 3);
-                    ChartCanvas.Children.Add(ellipse);
-                }
+                var last = points[points.Count - 1];
+                var dot = new Ellipse 
+                { 
+                    Width = 8, 
+                    Height = 8, 
+                    Fill = polyline.Stroke 
+                };
+                Canvas.SetLeft(dot, last.X - 4);
+                Canvas.SetTop(dot, last.Y - 4);
+                ChartCanvas.Children.Add(dot);
             }
         }
 
-        // 鼠标交互变量
-        private List<BatteryRecord> currentRecords;
+        private void DrawTimeLabels(Thickness padding, double plotW, double plotH, DateTime minT, DateTime maxT)
+        {
+            var gridBrush = new SolidColorBrush(Color.FromArgb(60, 148, 163, 184));
+
+            // 根据时间范围确定固定间隔和标签数量
+            TimeSpan interval;
+            int labelCount;
+            
+            if (selectedTimeRange <= 1)
+            {
+                interval = TimeSpan.FromMinutes(10); // 1小时：每10分钟
+                labelCount = 6; // 6个标签
+            }
+            else if (selectedTimeRange <= 6)
+            {
+                interval = TimeSpan.FromMinutes(30); // 6小时：每30分钟
+                labelCount = 12; // 12个标签
+            }
+            else
+            {
+                interval = TimeSpan.FromHours(2); // 24小时：每2小时
+                labelCount = 12; // 12个标签
+            }
+
+            var totalSeconds = (maxT - minT).TotalSeconds;
+
+            // 从最小时间开始，按固定间隔生成标签
+            for (int i = 0; i < labelCount; i++)
+            {
+                var t = minT.Add(TimeSpan.FromTicks(interval.Ticks * i));
+                
+                // 确保时间在范围内
+                if (t > maxT) break;
+                
+                var x = padding.Left + (t - minT).TotalSeconds / totalSeconds * plotW;
+
+                // 垂直网格线
+                var line = new Line
+                {
+                    X1 = x,
+                    X2 = x,
+                    Y1 = padding.Top,
+                    Y2 = padding.Top + plotH,
+                    Stroke = gridBrush,
+                    StrokeThickness = 1
+                };
+                ChartCanvas.Children.Add(line);
+
+                // 时间标签
+                var label = new TextBlock
+                {
+                    Text = t.ToString("HH:mm"),
+                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    FontSize = 11
+                };
+                
+                // 居中对齐标签
+                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                var left = x - label.DesiredSize.Width / 2;
+                
+                // 防止标签超出边界
+                if (left < padding.Left) left = padding.Left;
+                if (left + label.DesiredSize.Width > padding.Left + plotW) 
+                    left = padding.Left + plotW - label.DesiredSize.Width;
+                
+                Canvas.SetLeft(label, left);
+                Canvas.SetTop(label, padding.Top + plotH + 6);
+                ChartCanvas.Children.Add(label);
+            }
+        }
+
+        private static DateTime AlignToStep(DateTime dt, TimeSpan step)
+        {
+            if (step >= TimeSpan.FromHours(1))
+            {
+                var hourStep = (int)Math.Round(step.TotalHours);
+                var alignedHour = (dt.Hour / hourStep) * hourStep;
+                var baseTime = new DateTime(dt.Year, dt.Month, dt.Day, alignedHour, 0, 0);
+                if (baseTime < dt) baseTime = baseTime.AddHours(hourStep);
+                return baseTime;
+            }
+
+            var minuteStep = (int)Math.Round(step.TotalMinutes);
+            var alignedMinute = (dt.Minute / minuteStep) * minuteStep;
+            var baseMin = new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, alignedMinute, 0);
+            if (baseMin < dt) baseMin = baseMin.AddMinutes(minuteStep);
+            return baseMin;
+        }
 
         private void ChartCanvas_MouseMove(object sender, MouseEventArgs e)
         {
@@ -272,19 +408,20 @@ namespace BluetoothBatteryUI
             double width = ChartCanvas.ActualWidth;
             double height = ChartCanvas.ActualHeight;
 
-            double availableWidth = width - PaddingLeft - PaddingRight;
-            double availableHeight = height - PaddingTop - PaddingBottom;
+            var padding = chartPadding;
+            double plotW = Math.Max(1, width - padding.Left - padding.Right);
+            double plotH = Math.Max(1, height - padding.Top - padding.Bottom);
 
             // 如果鼠标在图表区域外，隐藏提示
-            if (mousePos.X < PaddingLeft || mousePos.X > width - PaddingRight || 
-                mousePos.Y < PaddingTop || mousePos.Y > height - PaddingBottom)
+            if (mousePos.X < padding.Left || mousePos.X > padding.Left + plotW || 
+                mousePos.Y < padding.Top || mousePos.Y > padding.Top + plotH)
             {
                 TooltipCanvas.Visibility = Visibility.Collapsed;
                 return;
             }
 
             // 计算鼠标位置对应的时间
-            double xRatio = (mousePos.X - PaddingLeft) / availableWidth;
+            double xRatio = (mousePos.X - padding.Left) / plotW;
             
             DateTime viewEndTime = currentRecords.Last().Timestamp;
             DateTime viewStartTime = viewEndTime.AddHours(-selectedTimeRange);
@@ -295,20 +432,17 @@ namespace BluetoothBatteryUI
             // 找到最近的记录
             var closestRecord = currentRecords.OrderBy(r => Math.Abs((r.Timestamp - hoveredTime).TotalSeconds)).First();
 
-            // 如果最近记录距离太远（例如超过这里显示范围的5%），也可以不显示
-            // 这里简单处理：直接显示最近的
-
             // 计算该记录在图表上的位置
             double recordTimeRatio = (closestRecord.Timestamp - viewStartTime).TotalSeconds / viewDuration.TotalSeconds;
-            double recordX = PaddingLeft + (recordTimeRatio * availableWidth);
-            double recordY = PaddingTop + availableHeight - (closestRecord.BatteryLevel / 100.0 * availableHeight);
+            double recordX = padding.Left + recordTimeRatio * plotW;
+            double recordY = padding.Top + (1 - closestRecord.BatteryLevel / 100.0) * plotH;
 
             // 更新提示UI
             TooltipCanvas.Visibility = Visibility.Visible;
             
             // 更新指示线位置
-            TooltipLine.Y1 = PaddingTop;
-            TooltipLine.Y2 = height - PaddingBottom;
+            TooltipLine.Y1 = padding.Top;
+            TooltipLine.Y2 = padding.Top + plotH;
             TooltipLine.X1 = recordX;
             TooltipLine.X2 = recordX;
 
@@ -337,78 +471,6 @@ namespace BluetoothBatteryUI
         private void ChartCanvas_MouseLeave(object sender, MouseEventArgs e)
         {
             TooltipCanvas.Visibility = Visibility.Collapsed;
-        }
-
-        private void DrawTimeLabels(List<BatteryRecord> records, double width, double height)
-        {
-            TimeLabelsPanel.Children.Clear();
-            
-            if (records.Count == 0) return;
-
-            DateTime viewEndTime = records.Last().Timestamp;
-            DateTime viewStartTime = viewEndTime.AddHours(-selectedTimeRange);
-            TimeSpan viewDuration = viewEndTime - viewStartTime;
-
-            // 确定时间间隔
-            TimeSpan interval;
-            switch (selectedTimeRange)
-            {
-                case 1: interval = TimeSpan.FromMinutes(10); break;
-                case 6: interval = TimeSpan.FromMinutes(30); break;
-                case 24: 
-                default: interval = TimeSpan.FromHours(2); break;
-            }
-
-            // 有效绘图区域宽度
-            double availableWidth = width - PaddingLeft - PaddingRight;
-
-            // 找到第一个刻度时间 (向上取整)
-            long ticks = interval.Ticks;
-            long startTicks = viewStartTime.Ticks;
-            long remainder = startTicks % ticks;
-            DateTime firstTickTime = new DateTime(startTicks + (remainder == 0 ? 0 : ticks - remainder));
-
-            // 循环生成标签
-            for (DateTime t = firstTickTime; t <= viewEndTime; t = t.Add(interval))
-            {
-                // 计算位置比例
-                double ratio = (t - viewStartTime).TotalSeconds / viewDuration.TotalSeconds;
-                
-                // 如果超出范围则跳过
-                if (ratio < 0 || ratio > 1) continue;
-
-                // 计算实际X坐标 (加上左边距)
-                double x = PaddingLeft + (ratio * availableWidth);
-
-                // 创建标签
-                var label = new TextBlock
-                {
-                    Text = t.ToString("HH:mm"),
-                    Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)),
-                    FontSize = 10
-                };
-
-                // 测量文本宽度以居中
-                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                double labelWidth = label.DesiredSize.Width;
-
-                Canvas.SetLeft(label, x - labelWidth / 2);
-                Canvas.SetTop(label, 5);
-                TimeLabelsPanel.Children.Add(label);
-
-                // 这个时间点对应的垂直网格线 (如果你想只在有效区域绘制)
-                 var line = new Line
-                {
-                    X1 = x,
-                    Y1 = PaddingTop,
-                    X2 = x,
-                    Y2 = height - PaddingBottom, // 这里的height是Canvas的高度，可能和 DrawGrid 的 height 一致
-                    Stroke = new SolidColorBrush(Color.FromRgb(31, 41, 55)), 
-                    StrokeThickness = 1,
-                    StrokeDashArray = new DoubleCollection { 2, 2 } 
-                };
-                ChartCanvas.Children.Add(line);
-            }
         }
 
         private void ShowNoData()
