@@ -386,6 +386,9 @@ namespace BluetoothBatteryUI
                 settings.TrayIconDevices.Remove(deviceId);
             }
             SettingsManager.SaveSettings(settings);
+            
+            // 立即更新托盘图标
+            UpdateTrayIconTooltip();
         }
 
         private void UpdateDeviceCardBattery(string deviceId, int batteryLevel)
@@ -452,6 +455,40 @@ namespace BluetoothBatteryUI
                     }
                 });
             }
+        }
+
+        private void HideDevice_Click(string deviceId)
+        {
+            // 添加到隐藏列表
+            if (!settings.HiddenDeviceIds.Contains(deviceId))
+            {
+                settings.HiddenDeviceIds.Add(deviceId);
+                SettingsManager.SaveSettings(settings);
+                Logger.Log($"设备 {deviceId} 已隐藏");
+            }
+            
+            // 从UI中移除
+            if (deviceCards.ContainsKey(deviceId))
+            {
+                var card = deviceCards[deviceId];
+                DeviceListPanel.Children.Remove(card);
+                deviceCards.Remove(deviceId);
+            }
+            
+            // 从电量字典中移除
+            if (deviceBatteryLevels.ContainsKey(deviceId))
+            {
+                deviceBatteryLevels.Remove(deviceId);
+            }
+            
+            // 从设备名称字典中移除
+            if (deviceNames.ContainsKey(deviceId))
+            {
+                deviceNames.Remove(deviceId);
+            }
+            
+            // 更新托盘图标
+            UpdateTrayIconTooltip();
         }
 
         private void Settings_Click(object sender, RoutedEventArgs e)
@@ -743,17 +780,21 @@ namespace BluetoothBatteryUI
             // 创建右键菜单
             var contextMenu = new ContextMenu();
             
-            var renameItem = new MenuItem { Header = "重命名", Icon = new TextBlock { Text = "\uE8AC", FontFamily = new FontFamily("Segoe MDL2 Assets") } };
+            var renameItem = new MenuItem { Header = "重命名", Icon = new TextBlock { Text = "\uE70F", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16 } };
             renameItem.Click += (s, e) => RenameDevice_Click(deviceInfo.Id, displayName);
             contextMenu.Items.Add(renameItem);
 
-            var iconItem = new MenuItem { Header = "自定义图标", Icon = new TextBlock { Text = "\uEB9F", FontFamily = new FontFamily("Segoe MDL2 Assets") } };
+            var iconItem = new MenuItem { Header = "自定义图标", Icon = new TextBlock { Text = "\uEB9F", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16 } };
             iconItem.Click += (s, e) => ChangeIcon_Click(deviceInfo.Id);
             contextMenu.Items.Add(iconItem);
 
-            var trayItem = new MenuItem { Header = "显示在托盘", IsCheckable = true, IsChecked = settings.TrayIconDevices.Contains(deviceInfo.Id) };
+            var trayItem = new MenuItem { Header = "显示在托盘", IsCheckable = true, IsChecked = settings.TrayIconDevices.Contains(deviceInfo.Id), Icon = new TextBlock { Text = "\uED1A", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16 } };
             trayItem.Click += (s, e) => ToggleTray_Click(deviceInfo.Id, trayItem);
             contextMenu.Items.Add(trayItem);
+            
+            var hideItem = new MenuItem { Header = "隐藏设备", Icon = new TextBlock { Text = "\uED1A", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16 } };
+            hideItem.Click += (s, e) => HideDevice_Click(deviceInfo.Id);
+            contextMenu.Items.Add(hideItem);
 
             card.ContextMenu = contextMenu;
 
@@ -827,22 +868,6 @@ namespace BluetoothBatteryUI
             };
             connectionTypeBadge.Child = connectionTypeText;
             namePanel.Children.Add(connectionTypeBadge);
-            
-            // 隐藏按钮 (移到右键菜单可能更好，但保留以便快速访问)
-            var hideButton = new Button
-            {
-                Content = "隐藏",
-                FontSize = 11,
-                Padding = new Thickness(8, 2, 8, 2),
-                Margin = new Thickness(10, 0, 0, 0),
-                Background = new SolidColorBrush(Color.FromRgb(45, 45, 48)),
-                Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170)),
-                BorderThickness = new Thickness(0),
-                Cursor = System.Windows.Input.Cursors.Hand,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            hideButton.Click += (s, e) => HideDevice(deviceInfo.Id);
-            namePanel.Children.Add(hideButton);
             
             centerPanel.Children.Add(namePanel);
             
@@ -1069,8 +1094,19 @@ namespace BluetoothBatteryUI
                 return;
             }
 
-            // 找到电量最低的设备
-            var lowestEntry = deviceBatteryLevels.OrderBy(x => x.Value).First();
+            // 找到电量最低的设备（只考虑仍在显示的设备）
+            var lowestEntry = deviceBatteryLevels
+                .Where(x => deviceCards.ContainsKey(x.Key))  // 只处理仍在显示的设备
+                .OrderBy(x => x.Value)
+                .FirstOrDefault();
+            
+            // 如果没有可显示的设备
+            if (lowestEntry.Key == null)
+            {
+                LowestBatteryPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+            
             var lowestDeviceId = lowestEntry.Key;
             var lowestBattery = lowestEntry.Value;
 

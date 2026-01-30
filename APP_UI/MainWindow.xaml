@@ -79,6 +79,87 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- 现代化右键菜单样式 -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
+                            </Border.Effect>
+                            <StackPanel IsItemsHost="True"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 现代化菜单项样式 -->
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Border"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Margin="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- 图标区域 -->
+                                <ContentPresenter Grid.Column="0"
+                                                  ContentSource="Icon"
+                                                  Margin="8,0,8,0"
+                                                  VerticalAlignment="Center"/>
+                                
+                                <!-- 文本区域 -->
+                                <ContentPresenter Grid.Column="1"
+                                                  ContentSource="Header"
+                                                  Margin="0,0,20,0"
+                                                  VerticalAlignment="Center"/>
+                                
+                                <!-- 勾选标记 -->
+                                <Path Grid.Column="2"
+                                      x:Name="CheckMark"
+                                      Data="M 0,5 L 3,8 L 8,0"
+                                      Stroke="#0078D4"
+                                      StrokeThickness="2"
+                                      Visibility="Collapsed"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#E3F2FD"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
