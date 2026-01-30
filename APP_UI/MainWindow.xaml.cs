@@ -155,8 +155,46 @@ namespace BluetoothBatteryUI
                 settings.DeviceIcons[deviceId] = dialog.SelectedIcon;
                 SettingsManager.SaveSettings(settings);
                 
-                // 刷新界面
-                StartScanning();
+                // 直接更新 UI，避免重新扫描导致闪烁或延迟
+                if (deviceCards.ContainsKey(deviceId))
+                {
+                    try
+                    {
+                        var card = deviceCards[deviceId];
+                        var grid = (Grid)card.Child;
+                        
+                        // 获取当前设备名称
+                        string deviceName = "";
+                        if (grid.Children.Count > 1 && grid.Children[1] is StackPanel centerPanel &&
+                            centerPanel.Children.Count > 0 && centerPanel.Children[0] is StackPanel namePanel &&
+                            namePanel.Children.Count > 0 && namePanel.Children[0] is TextBlock nameBlock)
+                        {
+                            deviceName = nameBlock.Text;
+                        }
+
+                        // 生成新图标
+                        var iconElement = DeviceIconManager.GetIconForDevice(deviceId, deviceName, settings);
+                        
+                        if (iconElement is UIElement uiIcon)
+                        {
+                            // 移除旧图标 (Column 0)
+                            var oldIcon = grid.Children.Cast<UIElement>().FirstOrDefault(e => Grid.GetColumn(e) == 0);
+                            if (oldIcon != null)
+                            {
+                                grid.Children.Remove(oldIcon);
+                            }
+                            
+                            Grid.SetColumn(uiIcon, 0);
+                            grid.Children.Add(uiIcon);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"更新图标失败: {ex.Message}");
+                        // 如果直接更新失败，回退到重新扫描
+                        StartScanning();
+                    }
+                }
             }
         }
 
@@ -196,12 +234,14 @@ namespace BluetoothBatteryUI
 
             // ... 其余逻辑不变 ...
             
-            // 更新颜色
-            var color = batteryLevel > 50 ? Color.FromRgb(76, 175, 80) :
-                       batteryLevel > 20 ? Color.FromRgb(255, 152, 0) :
-                       Color.FromRgb(244, 67, 54);
-            progressBar.Foreground = new SolidColorBrush(color);
-            batteryPercentText.Foreground = new SolidColorBrush(color);
+            // 更新颜色 (0-30 红, 30-70 黄, 70-100 绿)
+            var color = batteryLevel >= 70 ? Color.FromRgb(76, 175, 80) :   // Green
+                       batteryLevel >= 30 ? Color.FromRgb(255, 152, 0) :   // Yellow
+                       Color.FromRgb(244, 67, 54);                         // Red
+            var colorBrush = new SolidColorBrush(color);
+            
+            progressBar.Foreground = colorBrush;
+            batteryPercentText.Foreground = colorBrush;
         }
 
         private void HiddenDevices_Click(object sender, RoutedEventArgs e)
@@ -720,7 +760,7 @@ namespace BluetoothBatteryUI
                         // 根据连接状态显示不同的文本
                         if (isConnected)
                         {
-                            batteryText.Text = $"电池电量: {batteryLevel}%";
+                            batteryText.Text = $"设备电量: {batteryLevel}%";
                         }
                         else
                         {
@@ -759,7 +799,7 @@ namespace BluetoothBatteryUI
                     }
                     else
                     {
-                        batteryText.Text = "不支持电池服务";
+                        batteryText.Text = "获取设备电量失败";
                         batteryPercentText.Text = "N/A";
                         batteryPercentText.Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170));
                     }

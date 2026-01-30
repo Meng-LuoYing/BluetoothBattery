@@ -24,5 +24,11 @@ namespace BluetoothBatteryUI
         {
             DialogResult = false;
         }
+
+        private void ClearText_Click(object sender, RoutedEventArgs e)
+        {
+            NameTextBox.Clear();
+            NameTextBox.Focus();
+        }
     }
 }

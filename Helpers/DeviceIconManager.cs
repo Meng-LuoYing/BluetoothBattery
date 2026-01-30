@@ -34,14 +34,28 @@ namespace BluetoothBatteryUI
                                 Height = 32,
                                 Stretch = Stretch.Uniform,
                                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                                Margin = new System.Windows.Thickness(0, 0, 15, 0)
+                                HorizontalAlignment = System.Windows.HorizontalAlignment.Center
                             };
                             
                             // 圆形裁剪
                             var ellipseGeometry = new EllipseGeometry(new System.Windows.Point(16, 16), 16, 16);
                             image.Clip = ellipseGeometry;
                             
-                            return image;
+                            // 包装在 Border 中以保持一致性并支持状态颜色边框
+                            var border = new Border
+                            {
+                                Width = 40,
+                                Height = 40,
+                                CornerRadius = new System.Windows.CornerRadius(20),
+                                BorderBrush = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255)),
+                                BorderThickness = new System.Windows.Thickness(1),
+                                Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)), 
+                                Margin = new System.Windows.Thickness(0, 0, 15, 0),
+                                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                                Child = image
+                            };
+
+                            return border;
                         }
                         catch (Exception ex)
                         {
@@ -51,7 +65,13 @@ namespace BluetoothBatteryUI
                 }
                 else
                 {
-                    // 预设图标 (名称对应 Unicode 字符)
+                    // 如果长度为1，说明直接存储了符号 (修复预设图标显示问题)
+                    if (iconSetting.Length == 1)
+                    {
+                        return CreatePresetIcon(iconSetting);
+                    }
+
+                    // 预设图标 (兼容旧数据: 名称对应 Unicode 字符)
                     string symbol = GetSymbolForPreset(iconSetting);
                     return CreatePresetIcon(symbol);
                 }

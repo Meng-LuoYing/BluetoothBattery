@@ -30,6 +30,12 @@ namespace BluetoothBatteryUI
             BatteryPercentText.Text = $"{batteryLevel}%";
             ConnectionTypeText.Text = connectionType;
             
+            // 设置电量颜色
+            var batteryColor = batteryLevel >= 70 ? Color.FromRgb(76, 175, 80) :   // Green
+                              batteryLevel >= 30 ? Color.FromRgb(255, 152, 0) :   // Yellow
+                              Color.FromRgb(244, 67, 54);                         // Red
+            BatteryPercentText.Foreground = new SolidColorBrush(batteryColor);
+            
             // 绘制电量圆环
             DrawBatteryRing(batteryLevel);
             

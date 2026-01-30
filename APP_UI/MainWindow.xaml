@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="蓝牙设备电池监控" Height="600" Width="900"
+        Title="蓝牙设备电量监控" Height="600" Width="900"
         WindowStartupLocation="CenterScreen"
         Background="#1E1E1E">
 
@@ -97,7 +97,7 @@
                 </Grid.ColumnDefinitions>
                 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="🔋 蓝牙设备电池监控" 
+                    <TextBlock Text="🔋 蓝牙设备电量监控" 
                                FontSize="28" 
                                FontWeight="Bold" 
                                Foreground="White"/>
