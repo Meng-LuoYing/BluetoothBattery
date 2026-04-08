@@ -6,7 +6,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Input;
-using System.Linq;
 using BluetoothBatteryUI.Models;
 
 namespace BluetoothBatteryUI
@@ -17,18 +16,26 @@ namespace BluetoothBatteryUI
         private int currentBatteryLevel;
         private int selectedTimeRange = 6; // 默认6小时
         private bool isSidebarExpanded = false;
+        private string currentThemeMode = "light";
+        private Color chartGridColor = Color.FromArgb(90, 148, 163, 184);
+        private Color chartLabelColor = Color.FromRgb(100, 116, 139);
+        private Color chartBorderColor = Color.FromArgb(140, 10, 132, 255);
+        private Color chartLineColor = Color.FromRgb(10, 132, 255);
+        private string currentConnectionType = "未知";
 
-        public DeviceDetailsWindow(string deviceId, string deviceName, int batteryLevel, string connectionType)
+        public DeviceDetailsWindow(string deviceId, string deviceName, int batteryLevel, string connectionType, string themeMode = "light")
         {
             InitializeComponent();
             
             this.deviceId = deviceId;
             this.currentBatteryLevel = batteryLevel;
+            this.currentConnectionType = connectionType;
             
             // 设置设备信息
             DeviceNameText.Text = deviceName;
             BatteryPercentText.Text = $"{batteryLevel}%";
             ConnectionTypeText.Text = connectionType;
+            ApplyTheme(themeMode);
             
             // 设置电量颜色
             var batteryColor = batteryLevel >= 70 ? Color.FromRgb(76, 175, 80) :   // Green
@@ -44,6 +51,91 @@ namespace BluetoothBatteryUI
             
             // 监听窗口大小变化
             this.SizeChanged += DeviceDetailsWindow_SizeChanged;
+        }
+
+        private bool IsDarkTheme => currentThemeMode == "dark";
+
+        private void ApplyTheme(string themeMode)
+        {
+            currentThemeMode = string.Equals(themeMode, "dark", StringComparison.OrdinalIgnoreCase) ? "dark" : "light";
+
+            var isDark = IsDarkTheme;
+            var windowBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#0A0A0A" : "#F3F6FA"));
+            var panelBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#111111" : "#F2FFFFFF"));
+            var cardBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#161616" : "#F6FFFFFF"));
+            var innerBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#1C1C1C" : "#F3FFFFFF"));
+            var borderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2A2A2A" : "#DCE3EC"));
+            var innerBorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#333333" : "#DFE6EE"));
+            var primaryText = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#F5F5F5" : "#1F2937"));
+            var secondaryText = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#64748B"));
+            var accentBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2EA8FF" : "#0A84FF"));
+
+            Background = windowBg;
+            Foreground = primaryText;
+
+            SidebarBorder.Background = panelBg;
+            SidebarBorder.BorderBrush = borderBrush;
+            InfoCardBorder.Background = cardBg;
+            InfoCardBorder.BorderBrush = borderBrush;
+            ChartCardBorder.Background = cardBg;
+            ChartCardBorder.BorderBrush = borderBrush;
+            FooterBorder.Background = panelBg;
+            FooterBorder.BorderBrush = borderBrush;
+
+            UsageTitleText.Foreground = secondaryText;
+            NoDataText.Foreground = secondaryText;
+            TimeRangeTitleText.Foreground = primaryText;
+            TrendTitleText.Foreground = primaryText;
+            TrendIconText.Foreground = primaryText;
+            AvgLabelText.Foreground = secondaryText;
+            ConnLabelText.Foreground = secondaryText;
+            LastLabelText.Foreground = secondaryText;
+            AverageDrainText.Foreground = primaryText;
+            LastChangeText.Foreground = primaryText;
+            ConnectionTypeText.Foreground = primaryText;
+
+            TooltipBorder.Background = isDark
+                ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EE161616"))
+                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2FFFFFF"));
+            TooltipTime.Foreground = primaryText;
+            TooltipValue.Foreground = primaryText;
+            TooltipLine.Stroke = primaryText;
+            TooltipDot.Fill = accentBrush;
+            TooltipLegend.Fill = accentBrush;
+
+            var ringTrackColor = isDark ? Color.FromRgb(58, 58, 58) : Color.FromRgb(209, 213, 219);
+            foreach (var child in ((Grid)((Grid)InfoCardBorder.Child).Children[0]).Children)
+            {
+                if (child is Grid ringGrid)
+                {
+                    foreach (var ringChild in ringGrid.Children)
+                    {
+                        if (ringChild is Ellipse ellipse)
+                        {
+                            ellipse.Stroke = new SolidColorBrush(ringTrackColor);
+                        }
+                    }
+                }
+            }
+
+            if (((Grid)InfoCardBorder.Child).Children.Count > 1 && ((Grid)InfoCardBorder.Child).Children[1] is Border usageBorder)
+            {
+                usageBorder.Background = innerBg;
+                usageBorder.BorderBrush = innerBorderBrush;
+            }
+
+            ToggleSidebarButton.Foreground = secondaryText;
+            TimeRangeIconButton.Foreground = secondaryText;
+
+            if (currentConnectionType == "蓝牙")
+            {
+                ConnectionTypeText.Foreground = accentBrush;
+            }
+
+            chartGridColor = isDark ? Color.FromArgb(70, 130, 130, 130) : Color.FromArgb(90, 148, 163, 184);
+            chartLabelColor = isDark ? Color.FromRgb(179, 179, 179) : Color.FromRgb(100, 116, 139);
+            chartBorderColor = isDark ? Color.FromArgb(90, 46, 168, 255) : Color.FromArgb(140, 10, 132, 255);
+            chartLineColor = isDark ? Color.FromRgb(46, 168, 255) : Color.FromRgb(10, 132, 255);
         }
         
         private void DeviceDetailsWindow_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -356,7 +448,7 @@ namespace BluetoothBatteryUI
 
         private void DrawGrid(double width, double height, Thickness padding, double plotW, double plotH, DateTime minT, DateTime maxT)
         {
-            var gridBrush = new SolidColorBrush(Color.FromArgb(60, 148, 163, 184));
+            var gridBrush = new SolidColorBrush(chartGridColor);
 
             // 绘制水平网格线 (Y轴: 0-100)
             for (int i = 0; i <= 10; i++)
@@ -378,7 +470,7 @@ namespace BluetoothBatteryUI
                 var label = new TextBlock
                 {
                     Text = (100 - i * 10).ToString(),
-                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    Foreground = new SolidColorBrush(chartLabelColor),
                     FontSize = 11
                 };
                 Canvas.SetLeft(label, padding.Left - 45); // 靠近图表左边缘
@@ -391,7 +483,7 @@ namespace BluetoothBatteryUI
             {
                 Width = plotW,
                 Height = plotH,
-                Stroke = new SolidColorBrush(Color.FromArgb(80, 34, 211, 238)),
+                Stroke = new SolidColorBrush(chartBorderColor),
                 StrokeThickness = 1
             };
             Canvas.SetLeft(border, padding.Left);
@@ -422,8 +514,8 @@ namespace BluetoothBatteryUI
             var polyline = new Polyline
             {
                 Points = points,
-                Stroke = new SolidColorBrush(Color.FromRgb(34, 211, 238)),
-                StrokeThickness = 2,
+                Stroke = new SolidColorBrush(chartLineColor),
+                StrokeThickness = 2.5,
                 StrokeLineJoin = PenLineJoin.Round
             };
             ChartCanvas.Children.Add(polyline);
@@ -446,7 +538,7 @@ namespace BluetoothBatteryUI
 
         private void DrawTimeLabels(Thickness padding, double plotW, double plotH, DateTime minT, DateTime maxT)
         {
-            var gridBrush = new SolidColorBrush(Color.FromArgb(60, 148, 163, 184));
+            var gridBrush = new SolidColorBrush(chartGridColor);
 
             // 根据时间范围确定固定间隔和标签数量
             TimeSpan interval;
@@ -496,7 +588,7 @@ namespace BluetoothBatteryUI
                 var label = new TextBlock
                 {
                     Text = t.ToString("HH:mm"),
-                    Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                    Foreground = new SolidColorBrush(chartLabelColor),
                     FontSize = 11
                 };
                 

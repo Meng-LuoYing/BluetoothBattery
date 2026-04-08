@@ -31,5 +31,7 @@ namespace BluetoothBatteryUI
         public Dictionary<string, string> DeviceAliases { get; set; } = new Dictionary<string, string>(); // 设备别名
         public Dictionary<string, string> DeviceIcons { get; set; } = new Dictionary<string, string>();   // 设备图标路径或预设名
         public HashSet<string> TrayIconDevices { get; set; } = new HashSet<string>();                     // 显示在托盘的设备
+        public string ThemeMode { get; set; } = "dark";                                                  // 主题模式，"dark" 或 "light" 默认 "dark"
+        public bool UseSystemTheme { get; set; } = false;                                                // 是否使用系统主题颜色
     }
 }

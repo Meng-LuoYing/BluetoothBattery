@@ -5,8 +5,8 @@
         Width="980"
         Height="660"
         WindowStartupLocation="CenterOwner"
-        Background="#0B1320"
-        Foreground="White"
+        Background="#F3F6FA"
+        Foreground="#1F2937"
         ResizeMode="CanResize">
     
     <Window.Resources>
@@ -15,7 +15,7 @@
         <!-- 导航按钮样式 -->
         <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#E5E7EB"/>
+            <Setter Property="Foreground" Value="#334155"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="10,0"/>
             <Setter Property="Height" Value="34"/>
@@ -36,26 +36,26 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1F2937"/>
+                    <Setter Property="Background" Value="#66FFFFFF"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="ActiveNavButton" TargetType="Button" BasedOn="{StaticResource NavButton}">
-            <Setter Property="Background" Value="#0B1320"/>
-            <Setter Property="Foreground" Value="#67E8F9"/>
+            <Setter Property="Background" Value="#80FFFFFF"/>
+            <Setter Property="Foreground" Value="#0A84FF"/>
         </Style>
         
         <!-- 图标按钮样式 -->
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#E5E7EB"/>
+            <Setter Property="Foreground" Value="#475569"/>
             <Setter Property="BorderBrush" Value="{x:Null}"/>
             <Setter Property="Height" Value="44"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="#67E8F9"/>
+                    <Setter Property="Foreground" Value="#0A84FF"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -74,10 +74,10 @@
             </Grid.ColumnDefinitions>
             
             <!-- 左侧导航栏 -->
-            <Border Grid.Column="0"
-                    Background="#0F172A"
-                    CornerRadius="14"
-                    BorderBrush="#22D3EE"
+            <Border x:Name="SidebarBorder" Grid.Column="0"
+                    Background="#F2FFFFFF"
+                    CornerRadius="18"
+                    BorderBrush="#DCE3EC"
                     BorderThickness="1"
                     Padding="10">
                 <Grid>
@@ -126,7 +126,7 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,12">
-                            <TextBlock Text="时间范围" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="TimeRangeTitleText" Text="时间范围" FontWeight="SemiBold"/>
                         </StackPanel>
 
                         <Button Grid.Row="2"
@@ -162,10 +162,10 @@
                 </Grid.RowDefinitions>
 
                 <!-- 设备信息卡片 -->
-                <Border Background="#0F172A"
-                        CornerRadius="14"
+                <Border x:Name="InfoCardBorder" Background="#F6FFFFFF"
+                        CornerRadius="18"
                         Padding="18"
-                        BorderBrush="#22D3EE"
+                        BorderBrush="#DCE3EC"
                         BorderThickness="1">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -189,9 +189,9 @@
 
                             <!-- 电量圆环 -->
                             <Grid Grid.Column="1" Width="74" Height="74" VerticalAlignment="Center">
-                                <Ellipse Stroke="#1F2937" StrokeThickness="6"/>
+                                <Ellipse Stroke="#D1D5DB" StrokeThickness="6"/>
                                 <Path x:Name="BatteryArc"
-                                      Stroke="#22D3EE"
+                                      Stroke="#0A84FF"
                                       StrokeThickness="6"
                                       StrokeStartLineCap="Round"
                                       StrokeEndLineCap="Round"/>
@@ -207,14 +207,14 @@
                         <!-- 使用时长统计 -->
                         <Border Grid.Row="1"
                                 Margin="0,12,0,0"
-                                Background="#0B1320"
-                                CornerRadius="12"
+                                Background="#F3FFFFFF"
+                                CornerRadius="14"
                                 Padding="14,10"
-                                BorderBrush="#1F2937"
+                                BorderBrush="#DFE6EE"
                                 BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="使用时长统计（24h窗口）"
-                                           Foreground="#9CA3AF"
+                                <TextBlock x:Name="UsageTitleText" Text="使用时长统计（24h窗口）"
+                                           Foreground="#64748B"
                                            FontSize="12"/>
                                 <TextBlock x:Name="UsageTimeText"
                                            Text="0h 0m"
@@ -227,12 +227,12 @@
                 </Border>
 
                 <!-- 电量历史趋势图表 -->
-                <Border Grid.Row="1"
+                <Border x:Name="ChartCardBorder" Grid.Row="1"
                         Margin="0,16,0,0"
-                        Background="#0F172A"
-                        CornerRadius="14"
+                        Background="#F6FFFFFF"
+                        CornerRadius="18"
                         Padding="18"
-                        BorderBrush="#22D3EE"
+                        BorderBrush="#DCE3EC"
                         BorderThickness="1">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -242,8 +242,8 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
-                            <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="16"  Margin="0,2,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="电量历史走势" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TrendIconText" Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="16"  Margin="0,2,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TrendTitleText" Text="电量历史走势" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <Grid Grid.Row="1" Margin="0,12,0,0">
@@ -257,34 +257,34 @@
                             <Canvas x:Name="TooltipCanvas" IsHitTestVisible="False" Visibility="Collapsed">
                                 <!-- 垂直指示线 -->
                                 <Line x:Name="TooltipLine" 
-                                      Stroke="#FFFFFF" 
+                                      Stroke="#334155" 
                                       StrokeThickness="1" 
                                       StrokeDashArray="4 2"
-                                      Opacity="0.5"
+                                      Opacity="0.35"
                                       Y1="0" Y2="100"/>
                                 
                                 <!-- 信息框 -->
                                 <Border x:Name="TooltipBorder"
-                                        Background="#E6FFFFFF"
-                                        CornerRadius="4"
+                                        Background="#F2FFFFFF"
+                                        CornerRadius="10"
                                         Padding="8,4"
                                         Canvas.Left="0" Canvas.Top="0">
                                     <Border.Effect>
-                                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.3"/>
+                                        <DropShadowEffect Color="#4D334155" BlurRadius="14" ShadowDepth="0"/>
                                     </Border.Effect>
                                     <StackPanel>
                                         <TextBlock x:Name="TooltipTime" 
                                                    Text="13:07" 
                                                    FontSize="12" 
-                                                   Foreground="#333333"
+                                                   Foreground="#1F2937"
                                                    HorizontalAlignment="Center"
                                                    Margin="0,0,0,2"/>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Rectangle Width="8" Height="2" Fill="#FF69B4" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <Rectangle x:Name="TooltipLegend" Width="8" Height="2" Fill="#0A84FF" VerticalAlignment="Center" Margin="0,0,4,0"/>
                                             <TextBlock x:Name="TooltipValue" 
                                                        Text="电量 68" 
                                                        FontSize="12" 
-                                                       Foreground="#333333"
+                                                       Foreground="#1F2937"
                                                        FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </StackPanel>
@@ -294,14 +294,14 @@
                                 <Ellipse x:Name="TooltipDot"
                                          Width="10" Height="10"
                                          Stroke="White" StrokeThickness="2"
-                                         Fill="#22D3EE"/>
+                                         Fill="#0A84FF"/>
                             </Canvas>
 
                             <!-- 暂无数据提示 -->
                             <TextBlock x:Name="NoDataText"
                                        Text="暂无数据"
                                        FontSize="16"
-                                       Foreground="#666666"
+                                       Foreground="#64748B"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        Visibility="Collapsed"/>
@@ -316,19 +316,19 @@
         </Grid>
 
         <!-- 底部信息栏 -->
-        <Border Grid.Row="1"
-                Background="#0F172A"
-                CornerRadius="12"
+        <Border x:Name="FooterBorder" Grid.Row="1"
+                Background="#F2FFFFFF"
+                CornerRadius="14"
                 Padding="12"
                 Margin="0,16,0,0"
-                BorderBrush="#1F2937"
+                BorderBrush="#DCE3EC"
                 BorderThickness="1">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <TextBlock Text="⚡ 预估续航：" Foreground="#9CA3AF"/>
+                <TextBlock x:Name="AvgLabelText" Text="⚡ 预估续航：" Foreground="#64748B"/>
                 <TextBlock x:Name="AverageDrainText" Text="--" FontWeight="SemiBold"/>
-                <TextBlock Text="    🔗 连接方式：" Foreground="#9CA3AF" Margin="20,0,0,0"/>
+                <TextBlock x:Name="ConnLabelText" Text="    🔗 连接方式：" Foreground="#64748B" Margin="20,0,0,0"/>
                 <TextBlock x:Name="ConnectionTypeText" Text="蓝牙" FontWeight="SemiBold"/>
-                <TextBlock Text="    🕐 上次变化：" Foreground="#9CA3AF" Margin="20,0,0,0"/>
+                <TextBlock x:Name="LastLabelText" Text="    🕐 上次变化：" Foreground="#64748B" Margin="20,0,0,0"/>
                 <TextBlock x:Name="LastChangeText" Text="-" FontWeight="SemiBold"/>
             </StackPanel>
         </Border>

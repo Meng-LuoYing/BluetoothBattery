@@ -30,6 +30,7 @@ namespace BluetoothBatteryUI
         private System.Threading.Timer? autoRefreshTimer;  // 自动刷新定时器
         private bool isRefreshing = false;  // 刷新状态标志
         private WinForms.NotifyIcon? trayIcon;  // 系统托盘图标
+        private string currentThemeMode = "dark";   // 当前应用的主题模式
 
         public MainWindow()
         {
@@ -37,6 +38,8 @@ namespace BluetoothBatteryUI
             
             // 加载设置
             settings = SettingsManager.LoadSettings();
+            currentThemeMode = NormalizeThemeMode(settings.ThemeMode);
+            ApplyTheme(currentThemeMode, false);
             Logger.SetDetailedLogging(settings.DetailedLogging);
             
             // 应用启动设置
@@ -108,6 +111,140 @@ namespace BluetoothBatteryUI
             Show();
             WindowState = WindowState.Normal;
             Activate();
+        }
+
+        private string NormalizeThemeMode(string? mode)
+        {
+            return string.Equals(mode, "light", StringComparison.OrdinalIgnoreCase) ? "light" : "dark";
+        }
+
+        private bool IsDarkTheme => currentThemeMode == "dark";
+
+        private void ApplyTheme(string themeMode, bool saveSettings)
+        {
+            currentThemeMode = NormalizeThemeMode(themeMode);
+            var isDark = IsDarkTheme;
+
+            Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#0A0A0A" : "#F3F6FA"));
+            TitleBarBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#111111" : "#F6FFFFFF"));
+            StatusBarBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#111111" : "#F2FFFFFF"));
+
+            AppTitleText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#F5F5F5" : "#0F172A"));
+            AppSubtitleText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#64748B"));
+            ConnectedOnlyCheckBox.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#475569"));
+            DeviceCountText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#64748B"));
+            StatusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#64748B"));
+            LowestBatteryDeviceName.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#F5F5F5" : "#0F172A"));
+
+            var iconBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#F0F0F0" : "#334155"));
+            ScanIconPath.Fill = iconBrush;
+            HiddenIconPath.Fill = iconBrush;
+            SettingsIconPath.Fill = iconBrush;
+            ThemeIconPath.Fill = iconBrush;
+            BatteryBody.Stroke = iconBrush;
+            BatteryTerminal.Fill = iconBrush;
+
+            ThemeIconPath.Data = Geometry.Parse(isDark
+                ? "M12,4A1,1 0 0 1 13,5V6A1,1 0 0 1 11,6V5A1,1 0 0 1 12,4M12,18A1,1 0 0 1 13,19V20A1,1 0 0 1 11,20V19A1,1 0 0 1 12,18M4,12A1,1 0 0 1 5,11H6A1,1 0 0 1 6,13H5A1,1 0 0 1 4,12M18,12A1,1 0 0 1 19,11H20A1,1 0 0 1 20,13H19A1,1 0 0 1 18,12M6.34,6.34A1,1 0 0 1 7.75,6.34L8.46,7.05A1,1 0 0 1 7.05,8.46L6.34,7.75A1,1 0 0 1 6.34,6.34M15.54,15.54A1,1 0 0 1 16.95,15.54L17.66,16.25A1,1 0 0 1 16.25,17.66L15.54,16.95A1,1 0 0 1 15.54,15.54M6.34,17.66A1,1 0 0 1 6.34,16.25L7.05,15.54A1,1 0 0 1 8.46,16.95L7.75,17.66A1,1 0 0 1 6.34,17.66M15.54,8.46A1,1 0 0 1 15.54,7.05L16.25,6.34A1,1 0 0 1 17.66,7.75L16.95,8.46A1,1 0 0 1 15.54,8.46M12,8A4,4 0 1 1 8,12A4,4 0 0 1 12,8Z"
+                : "M12,3C7.03,3,3,7.03,3,12s4.03,9,9,9c4.26,0,7.82-2.98,8.72-7H19a7,7,0,0,1-7-7V3z");
+            ThemeToggleButton.ToolTip = isDark ? "切换到白天模式" : "切换到黑夜模式";
+
+            EmptyState.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#161616" : "#F6FFFFFF"));
+            if (EmptyState.Child is StackPanel stack && stack.Children.Count >= 3)
+            {
+                ((TextBlock)stack.Children[1]).Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#475569"));
+                ((TextBlock)stack.Children[2]).Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#8D8D8D" : "#64748B"));
+            }
+
+            LoadingOverlay.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3000000" : "#99E2E8F0"));
+            LoadingProgressBar.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2A2A2A" : "#DDE4EC"));
+            LoadingProgressBar.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2EA8FF" : "#0A84FF"));
+            LoadingText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#F5F5F5" : "#0F172A"));
+
+            foreach (var card in deviceCards.Values)
+            {
+                ApplyThemeToDeviceCard(card);
+            }
+
+            if (saveSettings)
+            {
+                settings.ThemeMode = currentThemeMode;
+                SettingsManager.SaveSettings(settings);
+            }
+        }
+
+        private void ApplyThemeToDeviceCard(Border card)
+        {
+            var isDark = IsDarkTheme;
+            card.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#161616" : "#F6FFFFFF"));
+            card.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2A2A2A" : "#DCE3EC"));
+            card.BorderThickness = new Thickness(1);
+
+            if (card.Child is not Grid grid || grid.Children.Count < 3) return;
+            if (grid.Children[1] is not StackPanel centerPanel) return;
+            if (grid.Children[2] is not StackPanel rightPanel) return;
+
+            var primaryText = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#F5F5F5" : "#0F172A"));
+            var secondaryText = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#64748B"));
+            var mutedText = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#8D8D8D" : "#7B8794"));
+
+            if (centerPanel.Children.Count > 0 && centerPanel.Children[0] is StackPanel namePanel)
+            {
+                if (namePanel.Children.Count > 0 && namePanel.Children[0] is TextBlock deviceNameBlock)
+                {
+                    deviceNameBlock.Foreground = primaryText;
+                }
+
+                if (namePanel.Children.Count > 1 && namePanel.Children[1] is Border statusBadge && statusBadge.Child is TextBlock statusText)
+                {
+                    var connected = statusText.Text == "已连接";
+                    statusBadge.Background = new SolidColorBrush(connected ? Color.FromRgb(76, 175, 80) : (isDark ? Color.FromRgb(110, 110, 110) : Color.FromRgb(148, 163, 184)));
+                    statusText.Foreground = Brushes.White;
+                }
+
+                if (namePanel.Children.Count > 2 && namePanel.Children[2] is Border connectionBadge && connectionBadge.Child is TextBlock connectionText)
+                {
+                    connectionBadge.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2EA8FF" : "#0A84FF"));
+                    connectionText.Foreground = Brushes.White;
+                }
+            }
+
+            if (centerPanel.Children.Count > 1 && centerPanel.Children[1] is TextBlock idText)
+            {
+                idText.Foreground = secondaryText;
+            }
+
+            if (centerPanel.Children.Count > 2 && centerPanel.Children[2] is StackPanel batteryPanel && batteryPanel.Children.Count > 0 && batteryPanel.Children[0] is TextBlock batteryText)
+            {
+                if (batteryText.Text.Contains("失败") || batteryText.Text.Contains("读取"))
+                {
+                    batteryText.Foreground = secondaryText;
+                }
+                else
+                {
+                    batteryText.Foreground = isDark
+                        ? new SolidColorBrush(Color.FromRgb(179, 179, 179))
+                        : new SolidColorBrush(Color.FromRgb(88, 104, 123));
+                }
+            }
+
+            if (centerPanel.Children.Count > 3 && centerPanel.Children[3] is TextBlock remainText)
+            {
+                remainText.Foreground = mutedText;
+            }
+
+            if (rightPanel.Children.Count > 0 && rightPanel.Children[0] is TextBlock percentText)
+            {
+                if (!int.TryParse(percentText.Text.Replace("%", ""), out _))
+                {
+                    percentText.Foreground = secondaryText;
+                }
+            }
+
+            if (rightPanel.Children.Count > 1 && rightPanel.Children[1] is ProgressBar bar)
+            {
+                bar.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2A2A2A" : "#E1E8F0"));
+            }
         }
 
         private void UpdateTrayIconTooltip()
@@ -536,6 +673,7 @@ namespace BluetoothBatteryUI
             {
                 // 设置已保存，重新加载
                 settings = SettingsManager.LoadSettings();
+                ApplyTheme(settings.ThemeMode, false);
                 Logger.SetDetailedLogging(settings.DetailedLogging);
                 Logger.Log("设置已更新");
                 
@@ -900,7 +1038,7 @@ namespace BluetoothBatteryUI
                 Text = displayName,
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
+                Foreground = IsDarkTheme ? Brushes.White : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A")),
                 VerticalAlignment = VerticalAlignment.Center,
                 ToolTip = originalName != displayName ? $"原名: {originalName}" : null
             };
@@ -909,7 +1047,7 @@ namespace BluetoothBatteryUI
             // 连接状态标签
             var statusBadge = new Border
             {
-                Background = new SolidColorBrush(isConnected ? Color.FromRgb(76, 175, 80) : Color.FromRgb(128, 128, 128)),
+                Background = new SolidColorBrush(isConnected ? Color.FromRgb(76, 175, 80) : (IsDarkTheme ? Color.FromRgb(128, 128, 128) : Color.FromRgb(148, 163, 184))),
                 CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(8, 2, 8, 2),
                 Margin = new Thickness(10, 0, 0, 0),
@@ -929,7 +1067,7 @@ namespace BluetoothBatteryUI
             // 连接类型标签
             var connectionTypeBadge = new Border
             {
-                Background = new SolidColorBrush(Color.FromRgb(0, 120, 212)),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(IsDarkTheme ? "#0078D4" : "#0A84FF")),
                 CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(8, 2, 8, 2),
                 Margin = new Thickness(10, 0, 0, 0),
@@ -953,7 +1091,7 @@ namespace BluetoothBatteryUI
             {
                 Text = $"ID: {deviceInfo.Id.Substring(Math.Max(0, deviceInfo.Id.Length - 20))}",
                 FontSize = 12,
-                Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170)),
+                Foreground = IsDarkTheme ? new SolidColorBrush(Color.FromRgb(170, 170, 170)) : new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 Margin = new Thickness(0, 4, 0, 0)
             };
             centerPanel.Children.Add(deviceIdBlock);
@@ -964,7 +1102,7 @@ namespace BluetoothBatteryUI
             {
                 Text = "正在读取...",
                 FontSize = 13,
-                Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170)),
+                Foreground = IsDarkTheme ? new SolidColorBrush(Color.FromRgb(170, 170, 170)) : new SolidColorBrush(Color.FromRgb(100, 116, 139)),
                 VerticalAlignment = VerticalAlignment.Center
             };
             batteryPanel.Children.Add(batteryText);
@@ -975,7 +1113,7 @@ namespace BluetoothBatteryUI
             {
                 Text = "预估剩余: --",
                 FontSize = 12,
-                Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128)), // Gray-500
+                Foreground = IsDarkTheme ? new SolidColorBrush(Color.FromRgb(107, 114, 128)) : new SolidColorBrush(Color.FromRgb(123, 135, 148)),
                 Margin = new Thickness(0, 2, 0, 0)
             };
             centerPanel.Children.Add(remainingTimeText);
@@ -996,7 +1134,7 @@ namespace BluetoothBatteryUI
                 Text = "--",
                 FontSize = 32,
                 FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
+                Foreground = IsDarkTheme ? Brushes.White : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0F172A")),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 0, 10)
             };
@@ -1010,6 +1148,7 @@ namespace BluetoothBatteryUI
                 Value = 0
             };
             rightPanel.Children.Add(progressBar);
+            progressBar.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(IsDarkTheme ? "#3E3E42" : "#E1E8F0"));
 
             // 优先使用内存缓存，其次尝试读取历史记录缓存
             int initialLevel = -1;
@@ -1065,6 +1204,7 @@ namespace BluetoothBatteryUI
             grid.Children.Add(rightPanel);
 
             card.Child = grid;
+            ApplyThemeToDeviceCard(card);
             // 设置卡片内容
             
             // 添加点击事件打开详情窗口
@@ -1107,7 +1247,7 @@ namespace BluetoothBatteryUI
                         else
                         {
                             batteryText.Text = $"上次已知电量: {batteryLevel}%";
-                            batteryText.Foreground = new SolidColorBrush(Color.FromRgb(150, 150, 150));
+                            batteryText.Foreground = IsDarkTheme ? new SolidColorBrush(Color.FromRgb(150, 150, 150)) : new SolidColorBrush(Color.FromRgb(120, 132, 147));
                         }
                         
                         batteryPercentText.Text = $"{batteryLevel}%";
@@ -1143,7 +1283,7 @@ namespace BluetoothBatteryUI
                     {
                         batteryText.Text = "获取设备电量失败";
                         batteryPercentText.Text = "N/A";
-                        batteryPercentText.Foreground = new SolidColorBrush(Color.FromRgb(170, 170, 170));
+                        batteryPercentText.Foreground = IsDarkTheme ? new SolidColorBrush(Color.FromRgb(170, 170, 170)) : new SolidColorBrush(Color.FromRgb(100, 116, 139));
                     }
                 });
             });
@@ -1453,9 +1593,16 @@ namespace BluetoothBatteryUI
             int batteryLevel = deviceBatteryLevels.ContainsKey(deviceId) ? deviceBatteryLevels[deviceId] : 0;
             string connectionType = deviceConnectionTypes.ContainsKey(deviceId) ? deviceConnectionTypes[deviceId] : "未知";
 
-            var detailsWindow = new DeviceDetailsWindow(deviceId, deviceName, batteryLevel, connectionType);
+            var detailsWindow = new DeviceDetailsWindow(deviceId, deviceName, batteryLevel, connectionType, currentThemeMode);
             detailsWindow.Owner = this;
             detailsWindow.ShowDialog();
+        }
+
+        private void ThemeToggle_Click(object sender, RoutedEventArgs e)
+        {
+            var nextTheme = IsDarkTheme ? "light" : "dark";
+            ApplyTheme(nextTheme, true);
+            UpdateStatus(IsDarkTheme ? "已切换到黑夜模式" : "已切换到白天模式", IsDarkTheme ? Colors.LightGreen : Colors.SteelBlue);
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)

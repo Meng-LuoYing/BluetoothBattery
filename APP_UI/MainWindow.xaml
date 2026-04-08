@@ -8,7 +8,7 @@
         WindowStartupLocation="CenterScreen"
         Icon="/Images/BluetoothIcon.png"
         Closing="Window_Closing"
-        Background="#1E1E1E">
+        Background="#0A0A0A">
 
     <Window.Resources>
         <!-- 现代化按钮样式 -->
@@ -47,21 +47,18 @@
 
         <!-- 设备卡片样式 -->
         <Style x:Key="DeviceCard" TargetType="Border">
-            <Setter Property="Background" Value="#2D2D30"/>
+            <Setter Property="Background" Value="#161616"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="10" ShadowDepth="2"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#2A2A2A"/>
         </Style>
 
         <!-- 电池电量进度条样式 -->
         <Style x:Key="BatteryProgressBar" TargetType="ProgressBar">
             <Setter Property="Height" Value="24"/>
-            <Setter Property="Background" Value="#3E3E42"/>
+            <Setter Property="Background" Value="#2A2A2A"/>
             <Setter Property="Foreground" Value="#4CAF50"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
@@ -172,7 +169,7 @@
         </Grid.RowDefinitions>
 
         <!-- 标题栏 -->
-        <Border Grid.Row="0" Background="#252526" Padding="30,20">
+        <Border x:Name="TitleBarBorder" Grid.Row="0" Background="#111111" Padding="30,20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -181,13 +178,13 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="🔋 蓝牙设备电量监控" 
+                    <TextBlock x:Name="AppTitleText" Text="🔋 蓝牙设备电量监控" 
                                FontSize="28" 
                                FontWeight="Bold" 
                                Foreground="White"/>
-                    <TextBlock Text="实时监控您的蓝牙设备电量" 
+                    <TextBlock x:Name="AppSubtitleText" Text="实时监控您的蓝牙设备电量" 
                                FontSize="14" 
-                               Foreground="#AAAAAA" 
+                               Foreground="#B3B3B3" 
                                Margin="0,5,0,0"/>
                 </StackPanel>
 
@@ -302,7 +299,7 @@
                             Click="HiddenDevices_Click">
                         <Grid Width="24" Height="24">
                             <!-- Hide.svg 路径 -->
-                            <Path Data="M12,4.5C7,4.5,2.73,7.61,1,12c1.73,4.39,6,7.5,11,7.5s9.27-3.11,11-7.5C21.27,7.61,17,4.5,12,4.5z M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5s5,2.24,5,5S14.76,17,12,17z M12,9c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3S13.66,9,12,9z"
+                            <Path x:Name="HiddenIconPath" Data="M12,4.5C7,4.5,2.73,7.61,1,12c1.73,4.39,6,7.5,11,7.5s9.27-3.11,11-7.5C21.27,7.61,17,4.5,12,4.5z M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5s5,2.24,5,5S14.76,17,12,17z M12,9c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3S13.66,9,12,9z"
                                   Fill="White"
                                   Stretch="Uniform"/>
                         </Grid>
@@ -315,7 +312,19 @@
                             Click="Settings_Click">
                         <Grid Width="24" Height="24">
                             <!-- Gear Path -->
-                            <Path Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                            <Path x:Name="SettingsIconPath" Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                                  Fill="White"
+                                  Stretch="Uniform"/>
+                        </Grid>
+                    </Button>
+
+                    <Button x:Name="ThemeToggleButton"
+                            ToolTip="切换主题"
+                            Style="{StaticResource IconButtonStyle}"
+                            Click="ThemeToggle_Click">
+                        <Grid Width="24" Height="24">
+                            <Path x:Name="ThemeIconPath"
+                                  Data="M12,3C7.03,3,3,7.03,3,12s4.03,9,9,9c4.26,0,7.82-2.98,8.72-7H19a7,7,0,0,1-7-7V3z"
                                   Fill="White"
                                   Stretch="Uniform"/>
                         </Grid>
@@ -342,7 +351,7 @@
             <StackPanel x:Name="DeviceListPanel">
                 <!-- 初始提示 -->
                 <Border x:Name="EmptyState" 
-                        Background="#2D2D30" 
+                        Background="#1E293B" 
                         CornerRadius="8" 
                         Padding="40"
                         HorizontalAlignment="Center"
@@ -367,7 +376,7 @@
         </ScrollViewer>
 
         <!-- 状态栏 -->
-        <Border Grid.Row="2" Background="#252526" Padding="30,15" Margin="0,221,0,0" Grid.RowSpan="2">
+        <Border x:Name="StatusBarBorder" Grid.Row="2" Background="#1F2937" Padding="30,15" Margin="0,221,0,0" Grid.RowSpan="2">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -428,16 +437,16 @@
         <!-- 加载指示器 -->
         <Grid x:Name="LoadingOverlay" 
               Grid.RowSpan="4" 
-              Background="#AA000000" 
+              Background="#99111827" 
               Visibility="Collapsed">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <ProgressBar IsIndeterminate="True" 
+                <ProgressBar x:Name="LoadingProgressBar" IsIndeterminate="True" 
                              Width="200" 
                              Height="4"
                              Background="#3E3E42"
                              Foreground="#0078D4"
                              BorderThickness="0"/>
-                <TextBlock Text="正在扫描蓝牙设备..." 
+                <TextBlock x:Name="LoadingText" Text="正在扫描蓝牙设备..." 
                            Foreground="White" 
                            FontSize="16"
                            Margin="0,20,0,0"
