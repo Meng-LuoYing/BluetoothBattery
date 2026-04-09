@@ -146,7 +146,7 @@ namespace BluetoothBatteryUI
             ThemeIconPath.Data = Geometry.Parse(isDark
                 ? "M12,4A1,1 0 0 1 13,5V6A1,1 0 0 1 11,6V5A1,1 0 0 1 12,4M12,18A1,1 0 0 1 13,19V20A1,1 0 0 1 11,20V19A1,1 0 0 1 12,18M4,12A1,1 0 0 1 5,11H6A1,1 0 0 1 6,13H5A1,1 0 0 1 4,12M18,12A1,1 0 0 1 19,11H20A1,1 0 0 1 20,13H19A1,1 0 0 1 18,12M6.34,6.34A1,1 0 0 1 7.75,6.34L8.46,7.05A1,1 0 0 1 7.05,8.46L6.34,7.75A1,1 0 0 1 6.34,6.34M15.54,15.54A1,1 0 0 1 16.95,15.54L17.66,16.25A1,1 0 0 1 16.25,17.66L15.54,16.95A1,1 0 0 1 15.54,15.54M6.34,17.66A1,1 0 0 1 6.34,16.25L7.05,15.54A1,1 0 0 1 8.46,16.95L7.75,17.66A1,1 0 0 1 6.34,17.66M15.54,8.46A1,1 0 0 1 15.54,7.05L16.25,6.34A1,1 0 0 1 17.66,7.75L16.95,8.46A1,1 0 0 1 15.54,8.46M12,8A4,4 0 1 1 8,12A4,4 0 0 1 12,8Z"
                 : "M12,3C7.03,3,3,7.03,3,12s4.03,9,9,9c4.26,0,7.82-2.98,8.72-7H19a7,7,0,0,1-7-7V3z");
-            ThemeToggleButton.ToolTip = isDark ? "切换到白天模式" : "切换到黑夜模式";
+            ThemeToggleButton.ToolTip = isDark ? "切换到浅色模式" : "切换到深色模式";
 
             EmptyState.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#242424" : "#F6FFFFFF"));
             if (EmptyState.Child is StackPanel stack && stack.Children.Count >= 3)
@@ -560,43 +560,59 @@ namespace BluetoothBatteryUI
             if (centerPanel.Children.Count > 3)
             {
                 var remainingTimeText = (TextBlock)centerPanel.Children[3];
-                // 计算预估剩余时间
-                try
-                {
-                    double drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(24));
-                     if (drainRate <= 0)
-                    {
-                        // 尝试使用更短的时间范围
-                        drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(6));
-                    }
-
-                    if (drainRate > 0)
-                    {
-                        var hoursLeft = batteryLevel / drainRate;
-                        if (hoursLeft > 99)
-                        {
-                            remainingTimeText.Text = "预估剩余: >99小时";
-                        }
-                        else
-                        {
-                            int h = (int)hoursLeft;
-                            int m = (int)((hoursLeft - h) * 60);
-                            remainingTimeText.Text = h > 0 ? $"预估剩余: {h}小时 {m}分钟" : $"预估剩余: {m}分钟";
-                        }
-                    }
-                    else
-                    {
-                        remainingTimeText.Text = "预估剩余: --";
-                    }
-                }
-                catch
-                {
-                    remainingTimeText.Text = "预估剩余: --";
-                }
+                remainingTimeText.Text = GetRemainingTimeDisplayText(deviceId, batteryLevel);
             }
             
             // 更新托盘图标提示
             UpdateTrayIconTooltip();
+        }
+
+        private string GetRemainingTimeDisplayText(string deviceId, int batteryLevel)
+        {
+            try
+            {
+                var drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(24));
+
+                if (drainRate <= 0)
+                {
+                    drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceId, TimeSpan.FromHours(6));
+                }
+
+                if (drainRate <= 0)
+                {
+                    var rangeRecs = DeviceHistoryManager.GetRecordsInRange(deviceId, TimeSpan.FromHours(24));
+                    if (rangeRecs.Count >= 2)
+                    {
+                        var first = rangeRecs.First();
+                        var last = rangeRecs.Last();
+                        var totalHours = (last.Timestamp - first.Timestamp).TotalHours;
+                        var totalDrop = first.BatteryLevel - last.BatteryLevel;
+
+                        if (totalHours > 0.1 && totalDrop > 0)
+                        {
+                            drainRate = totalDrop / totalHours;
+                        }
+                    }
+                }
+
+                if (drainRate > 0 && batteryLevel > 0)
+                {
+                    var hoursLeft = batteryLevel / drainRate;
+                    if (hoursLeft > 99)
+                    {
+                        return "预估剩余: >99小时";
+                    }
+
+                    int h = (int)hoursLeft;
+                    int m = (int)((hoursLeft - h) * 60);
+                    return h > 0 ? $"预估剩余: {h}小时 {m}分钟" : $"预估剩余: {m}分钟";
+                }
+            }
+            catch
+            {
+            }
+
+            return "预估剩余: --";
         }
 
         private void HiddenDevices_Click(object sender, RoutedEventArgs e)
@@ -1187,20 +1203,7 @@ namespace BluetoothBatteryUI
                 
                 batteryText.Text = $"设备电量: {initialLevel}%";
 
-                // 尝试计算预估时间 (如果有历史记录)
-                try {
-                     double drainRate = DeviceHistoryManager.CalculateAverageBatteryDrain(deviceInfo.Id, TimeSpan.FromHours(24));
-                     if (drainRate > 0) {
-                        var hoursLeft = initialLevel / drainRate;
-                         if (hoursLeft > 99) {
-                            remainingTimeText.Text = "预估剩余: >99小时";
-                        } else {
-                            int h = (int)hoursLeft;
-                            int m = (int)((hoursLeft - h) * 60);
-                            remainingTimeText.Text = h > 0 ? $"预估剩余: {h}小时 {m}分钟" : $"预估剩余: {m}分钟";
-                        }
-                     }
-                } catch {}
+                remainingTimeText.Text = GetRemainingTimeDisplayText(deviceInfo.Id, initialLevel);
             }
 
             Grid.SetColumn(rightPanel, 2);

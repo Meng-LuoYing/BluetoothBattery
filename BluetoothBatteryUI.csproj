@@ -23,4 +23,10 @@
     <Resource Include="Images\BluetoothIcon.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Images\Icons\*.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="蓝牙设备电量监控" Height="600" Width="900"
+        Title="蓝牙设备电量监控" Height="600" Width="900" MinWidth="860" MinHeight="620"
         WindowStartupLocation="CenterScreen"
         Icon="/Images/BluetoothIcon.png"
         Closing="Window_Closing"
@@ -163,8 +163,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="219*"/>
-            <RowDefinition Height="221*"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -331,8 +330,9 @@
 
         <!-- 设备列表区域 -->
         <ScrollViewer 
-                      VerticalScrollBarVisibility="Hidden"
-                      Padding="30,20" Margin="0,98,0,0" Grid.RowSpan="3">
+                      Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="30,20">
             <StackPanel x:Name="DeviceListPanel">
                 <!-- 初始提示 -->
                 <Border x:Name="EmptyState" 
@@ -361,7 +361,7 @@
         </ScrollViewer>
 
         <!-- 状态栏 -->
-        <Border x:Name="StatusBarBorder" Grid.Row="2" Background="#1F2937" Padding="30,15" Margin="0,221,0,0" Grid.RowSpan="2">
+        <Border x:Name="StatusBarBorder" Grid.Row="2" Background="#1F2937" Padding="30,15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -421,7 +421,7 @@
 
         <!-- 加载指示器 -->
         <Grid x:Name="LoadingOverlay" 
-              Grid.RowSpan="4" 
+              Grid.RowSpan="3" 
               Background="#99111827" 
               Visibility="Collapsed">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
