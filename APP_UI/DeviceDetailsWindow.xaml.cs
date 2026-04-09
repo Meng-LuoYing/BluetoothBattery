@@ -60,12 +60,12 @@ namespace BluetoothBatteryUI
             currentThemeMode = string.Equals(themeMode, "dark", StringComparison.OrdinalIgnoreCase) ? "dark" : "light";
 
             var isDark = IsDarkTheme;
-            var windowBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#0A0A0A" : "#F3F6FA"));
-            var panelBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#111111" : "#F2FFFFFF"));
-            var cardBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#161616" : "#F6FFFFFF"));
-            var innerBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#1C1C1C" : "#F3FFFFFF"));
-            var borderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2A2A2A" : "#DCE3EC"));
-            var innerBorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#333333" : "#DFE6EE"));
+            var windowBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#151515" : "#F3F6FA"));
+            var panelBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#1E1E1E" : "#F2FFFFFF"));
+            var cardBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#242424" : "#F6FFFFFF"));
+            var innerBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2B2B2B" : "#F3FFFFFF"));
+            var borderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#3A3A3A" : "#DCE3EC"));
+            var innerBorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#4A4A4A" : "#DFE6EE"));
             var primaryText = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#F5F5F5" : "#1F2937"));
             var secondaryText = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#B3B3B3" : "#64748B"));
             var accentBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(isDark ? "#2EA8FF" : "#0A84FF"));
@@ -95,7 +95,7 @@ namespace BluetoothBatteryUI
             ConnectionTypeText.Foreground = primaryText;
 
             TooltipBorder.Background = isDark
-                ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EE161616"))
+                ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EE242424"))
                 : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2FFFFFF"));
             TooltipTime.Foreground = primaryText;
             TooltipValue.Foreground = primaryText;
@@ -103,7 +103,7 @@ namespace BluetoothBatteryUI
             TooltipDot.Fill = accentBrush;
             TooltipLegend.Fill = accentBrush;
 
-            var ringTrackColor = isDark ? Color.FromRgb(58, 58, 58) : Color.FromRgb(209, 213, 219);
+            var ringTrackColor = isDark ? Color.FromRgb(74, 74, 74) : Color.FromRgb(209, 213, 219);
             foreach (var child in ((Grid)((Grid)InfoCardBorder.Child).Children[0]).Children)
             {
                 if (child is Grid ringGrid)

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -8,7 +9,7 @@ namespace BluetoothBatteryUI
 {
     public static class DeviceIconManager
     {
-        public static object GetIconForDevice(string deviceId, string deviceName, AppSettings settings)
+        public static object GetIconForDevice(string deviceId, string deviceName, AppSettings settings, bool isDarkTheme = true)
         {
             // 1. 检查是否存在自定义图标设置
             if (settings.DeviceIcons.TryGetValue(deviceId, out string iconSetting))
@@ -47,13 +48,12 @@ namespace BluetoothBatteryUI
                                 Width = 40,
                                 Height = 40,
                                 CornerRadius = new System.Windows.CornerRadius(20),
-                                BorderBrush = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255)),
                                 BorderThickness = new System.Windows.Thickness(1),
-                                Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)), 
                                 Margin = new System.Windows.Thickness(0, 0, 15, 0),
                                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
                                 Child = image
                             };
+                            ApplyTheme(border, isDarkTheme);
 
                             return border;
                         }
@@ -68,18 +68,18 @@ namespace BluetoothBatteryUI
                     // 如果长度为1，说明直接存储了符号 (修复预设图标显示问题)
                     if (iconSetting.Length == 1)
                     {
-                        return CreatePresetIcon(iconSetting);
+                        return CreatePresetIcon(iconSetting, isDarkTheme);
                     }
 
                     // 预设图标 (兼容旧数据: 名称对应 Unicode 字符)
                     string symbol = GetSymbolForPreset(iconSetting);
-                    return CreatePresetIcon(symbol);
+                    return CreatePresetIcon(symbol, isDarkTheme);
                 }
             }
 
             // 2. 如果没有自定义，根据名称自动判断
             string defaultSymbol = GetDefaultSymbolForDevice(deviceName);
-            return CreatePresetIcon(defaultSymbol);
+            return CreatePresetIcon(defaultSymbol, isDarkTheme);
         }
 
         private static string GetSymbolForPreset(string presetName)
@@ -112,7 +112,29 @@ namespace BluetoothBatteryUI
             return "\uE972"; // 默认蓝牙图标
         }
 
-        private static Border CreatePresetIcon(string symbol)
+        public static void ApplyTheme(UIElement iconElement, bool isDarkTheme)
+        {
+            if (iconElement is not Border border)
+            {
+                return;
+            }
+
+            border.BorderBrush = isDarkTheme
+                ? new SolidColorBrush(Color.FromArgb(120, 255, 255, 255))
+                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CBD5E1"));
+            border.Background = isDarkTheme
+                ? new SolidColorBrush(Color.FromArgb(22, 255, 255, 255))
+                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EEF2F7"));
+
+            if (border.Child is TextBlock textBlock)
+            {
+                textBlock.Foreground = isDarkTheme
+                    ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F8FAFC"))
+                    : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#475569"));
+            }
+        }
+
+        private static Border CreatePresetIcon(string symbol, bool isDarkTheme)
         {
             // 创建带圆圈的图标容器
             var border = new Border
@@ -120,9 +142,7 @@ namespace BluetoothBatteryUI
                 Width = 40,
                 Height = 40,
                 CornerRadius = new System.Windows.CornerRadius(20), // 圆形
-                BorderBrush = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255)), // 半透明白色边框
                 BorderThickness = new System.Windows.Thickness(1),
-                Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)), // 轻微背景色
                 Margin = new System.Windows.Thickness(0, 0, 15, 0),
                 VerticalAlignment = System.Windows.VerticalAlignment.Center
             };
@@ -132,12 +152,12 @@ namespace BluetoothBatteryUI
                 Text = symbol,
                 FontFamily = new FontFamily("Segoe MDL2 Assets"),
                 FontSize = 20,
-                Foreground = Brushes.White,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 VerticalAlignment = System.Windows.VerticalAlignment.Center
             };
 
             border.Child = textBlock;
+            ApplyTheme(border, isDarkTheme);
             return border;
         }
     }

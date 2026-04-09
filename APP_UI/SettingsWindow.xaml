@@ -6,9 +6,19 @@
         Width="450"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="#1E1E1E">
+        Background="{DynamicResource WindowBackgroundBrush}">
     
     <Window.Resources>
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#151515"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#242424"/>
+        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#2D2D2D"/>
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#B3B3B3"/>
+        <SolidColorBrush x:Key="InputBackgroundBrush" Color="#2B2B2B"/>
+        <SolidColorBrush x:Key="InputBorderBrush" Color="#4A4A4A"/>
+        <SolidColorBrush x:Key="PrimaryButtonBrush" Color="#0A84FF"/>
+        <SolidColorBrush x:Key="PrimaryButtonHoverBrush" Color="#2997FF"/>
+
         <!-- 开关样式 -->
         <Style x:Key="ToggleSwitch" TargetType="CheckBox">
             <Setter Property="Template">
@@ -71,8 +81,8 @@
 
         <!-- 按钮样式 -->
         <Style x:Key="SettingsButton" TargetType="Button">
-            <Setter Property="Background" Value="#2D2D30"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="20,10"/>
             <Setter Property="FontSize" Value="14"/>
@@ -90,16 +100,16 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3E3E42"/>
+                    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource SettingsButton}">
-            <Setter Property="Background" Value="#007ACC"/>
+            <Setter Property="Background" Value="{DynamicResource PrimaryButtonBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1C97EA"/>
+                    <Setter Property="Background" Value="{DynamicResource PrimaryButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -119,36 +129,36 @@
                 <TextBlock Text="常规设置" 
                            FontSize="16" 
                            FontWeight="Bold" 
-                           Foreground="White" 
+                           Foreground="{DynamicResource PrimaryTextBrush}" 
                            Margin="0,0,0,15"/>
                 
                 <StackPanel Margin="0,0,0,20">
                     <TextBlock Text="低电量提醒阈值 (%)" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="13"
                                Margin="0,0,0,8"/>
                     <TextBox x:Name="ThresholdTextBox"
                              Text="30"
                              FontSize="14"
                              Padding="10"
-                             Background="#2D2D30"
-                             Foreground="White"
-                             BorderBrush="#555555"
+                             Background="{DynamicResource InputBackgroundBrush}"
+                             Foreground="{DynamicResource PrimaryTextBrush}"
+                             BorderBrush="{DynamicResource InputBorderBrush}"
                              BorderThickness="1"/>
                 </StackPanel>
 
                 <StackPanel Margin="0,0,0,20">
                     <TextBlock Text="刷新间隔 (分钟)" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="13"
                                Margin="0,0,0,8"/>
                     <TextBox x:Name="RefreshIntervalTextBox"
                              Text="5"
                              FontSize="14"
                              Padding="10"
-                             Background="#2D2D30"
-                             Foreground="White"
-                             BorderBrush="#555555"
+                             Background="{DynamicResource InputBackgroundBrush}"
+                             Foreground="{DynamicResource PrimaryTextBrush}"
+                             BorderBrush="{DynamicResource InputBorderBrush}"
                              BorderThickness="1"/>
                 </StackPanel>
 
@@ -156,7 +166,7 @@
                 <TextBlock Text="功能开关" 
                            FontSize="16" 
                            FontWeight="Bold" 
-                           Foreground="White" 
+                           Foreground="{DynamicResource PrimaryTextBrush}" 
                            Margin="0,10,0,15"/>
                 
                 <Grid Margin="0,0,0,10">
@@ -166,7 +176,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Text="开启自动刷新" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="14"
                                VerticalAlignment="Center"/>
                     <CheckBox x:Name="EnableAutoRefreshCheckBox"
@@ -182,7 +192,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Text="开启低电量提醒" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="14"
                                VerticalAlignment="Center"/>
                     <CheckBox x:Name="EnableAlertCheckBox"
@@ -198,7 +208,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Text="使用 Toast 通知（在右下角）" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="14"
                                VerticalAlignment="Center"/>
                     <CheckBox x:Name="UseToastCheckBox"
@@ -214,7 +224,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Text="开机自启动" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="14"
                                VerticalAlignment="Center"/>
                     <CheckBox x:Name="StartupCheckBox"
@@ -231,7 +241,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Text="关闭时最小化到托盘" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="14"
                                VerticalAlignment="Center"/>
                     <CheckBox x:Name="MinimizeToTrayCheckBox"
@@ -246,7 +256,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Text="详细日志" 
-                               Foreground="#AAAAAA" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="14"
                                VerticalAlignment="Center"/>
                     <CheckBox x:Name="DetailedLoggingCheckBox"
@@ -258,17 +268,20 @@
 
         <!-- 底部按钮 -->
         <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,20,0,0">
-            <Button Content="打开日志文件夹"
+            <Button x:Name="OpenLogFolderButton"
+                    Content="打开日志文件夹"
                     Style="{StaticResource SettingsButton}"
                     HorizontalAlignment="Stretch"
                     Margin="0,0,0,10"
                     Click="OpenLogFolder_Click"/>
-            <Button Content="保存设置"
+            <Button x:Name="SaveSettingsButton"
+                    Content="保存设置"
                     Style="{StaticResource PrimaryButton}"
                     HorizontalAlignment="Stretch"
                     Margin="0,0,0,10"
                     Click="SaveSettings_Click"/>
-            <Button Content="取消"
+            <Button x:Name="CancelButton"
+                    Content="取消"
                     Style="{StaticResource SettingsButton}"
                     HorizontalAlignment="Stretch"
                     Click="Cancel_Click"/>

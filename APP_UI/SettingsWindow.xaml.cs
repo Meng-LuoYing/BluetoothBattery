@@ -1,18 +1,44 @@
 using System;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Media;
 
 namespace BluetoothBatteryUI
 {
     public partial class SettingsWindow : Window
     {
         private AppSettings settings;
+        private string currentThemeMode;
 
-        public SettingsWindow(AppSettings currentSettings)
+        public SettingsWindow(AppSettings currentSettings, string themeMode = "dark")
         {
             InitializeComponent();
             settings = currentSettings;
+            currentThemeMode = string.Equals(themeMode, "light", StringComparison.OrdinalIgnoreCase) ? "light" : "dark";
             LoadSettings();
+            ApplyTheme();
+        }
+
+        private bool IsDarkTheme => currentThemeMode == "dark";
+
+        private void ApplyTheme()
+        {
+            var isDark = IsDarkTheme;
+            SetBrush("WindowBackgroundBrush", isDark ? "#151515" : "#F3F6FA");
+            SetBrush("SurfaceBrush", isDark ? "#242424" : "#F6F8FB");
+            SetBrush("SurfaceHoverBrush", isDark ? "#2D2D2D" : "#E9EEF5");
+            SetBrush("PrimaryTextBrush", isDark ? "#F5F5F5" : "#0F172A");
+            SetBrush("SecondaryTextBrush", isDark ? "#B3B3B3" : "#64748B");
+            SetBrush("InputBackgroundBrush", isDark ? "#2B2B2B" : "#FFFFFF");
+            SetBrush("InputBorderBrush", isDark ? "#4A4A4A" : "#DCE3EC");
+            SetBrush("PrimaryButtonBrush", isDark ? "#0A84FF" : "#0A84FF");
+            SetBrush("PrimaryButtonHoverBrush", isDark ? "#2997FF" : "#2997FF");
+            Background = (Brush)Resources["WindowBackgroundBrush"];
+        }
+
+        private void SetBrush(string resourceKey, string colorValue)
+        {
+            Resources[resourceKey] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorValue));
         }
 
         private void LoadSettings()
