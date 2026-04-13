@@ -41,7 +41,7 @@ namespace BluetoothBatteryUI
                     {
                         try
                         {
-                            var imageSource = TryLoadImageSourceFromFile(iconSetting);
+                            var imageSource = TryLoadImageSourceFromFile(iconSetting, isDarkTheme);
                             if (imageSource == null)
                             {
                                 return CreateDefaultDeviceIcon(isDarkTheme);
@@ -158,11 +158,11 @@ namespace BluetoothBatteryUI
             }
 
             border.BorderBrush = isDarkTheme
-                ? new SolidColorBrush(Color.FromArgb(120, 255, 255, 255))
-                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#CBD5E1"));
+                ? new SolidColorBrush(Color.FromArgb(180, 203, 213, 225))
+                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#B9C5D6"));
             border.Background = isDarkTheme
-                ? new SolidColorBrush(Color.FromArgb(22, 255, 255, 255))
-                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EEF2F7"));
+                ? new SolidColorBrush(Color.FromArgb(95, 56, 65, 78))
+                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E3EAF3"));
 
             if (border.Child is TextBlock textBlock)
             {
@@ -185,6 +185,10 @@ namespace BluetoothBatteryUI
                     path.Fill = iconBrush;
                 }
             }
+            else if (border.Child is Image image)
+            {
+                image.Opacity = 1.0;
+            }
         }
 
         private static Border CreatePresetIcon(string symbol, bool isDarkTheme)
@@ -192,7 +196,7 @@ namespace BluetoothBatteryUI
             var iconFileName = GetPresetSvgFileBySymbol(symbol);
             if (!string.IsNullOrWhiteSpace(iconFileName))
             {
-                var imageSource = TryLoadProjectSvgImageSource(iconFileName);
+                var imageSource = TryLoadProjectSvgImageSource(iconFileName, isDarkTheme);
                 if (imageSource == null)
                 {
                     return CreateDefaultDeviceIcon(isDarkTheme);
@@ -259,13 +263,13 @@ namespace BluetoothBatteryUI
             };
         }
 
-        private static ImageSource TryLoadProjectSvgImageSource(string fileName)
+        private static ImageSource TryLoadProjectSvgImageSource(string fileName, bool isDarkTheme)
         {
             var fullPath = Path.Combine(AppContext.BaseDirectory, IconsFolder, fileName);
-            return TryLoadImageSourceFromFile(fullPath);
+            return TryLoadImageSourceFromFile(fullPath, isDarkTheme);
         }
 
-        private static ImageSource TryLoadImageSourceFromFile(string filePath)
+        private static ImageSource TryLoadImageSourceFromFile(string filePath, bool isDarkTheme)
         {
             try
             {
@@ -291,7 +295,9 @@ namespace BluetoothBatteryUI
                     {
                         var drawing = new GeometryDrawing
                         {
-                            Brush = Brushes.White,
+                            Brush = isDarkTheme
+                                ? Brushes.White
+                                : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155")),
                             Geometry = Geometry.Parse(pathMatch.Groups[1].Value)
                         };
                         var drawingImage = new DrawingImage(drawing);
@@ -319,7 +325,7 @@ namespace BluetoothBatteryUI
 
         private static Border CreateDefaultDeviceIcon(bool isDarkTheme)
         {
-            var imageSource = TryLoadProjectSvgImageSource(BluetoothIconFile);
+            var imageSource = TryLoadProjectSvgImageSource(BluetoothIconFile, isDarkTheme);
             if (imageSource != null)
             {
                 var imageBorder = new Border

@@ -30,6 +30,9 @@ namespace BluetoothBatteryUI
         private System.Threading.Timer? autoRefreshTimer;  // 自动刷新定时器
         private bool isRefreshing = false;  // 刷新状态标志
         private WinForms.NotifyIcon? trayIcon;  // 系统托盘图标
+        private WinForms.ContextMenuStrip? trayMenu;
+        private readonly List<WinForms.ToolStripItem> trayDeviceMenuItems = new List<WinForms.ToolStripItem>();
+        private WinForms.ToolStripSeparator? trayDeviceSeparator;
         private string currentThemeMode = "dark";   // 当前应用的主题模式
 
         public MainWindow()
@@ -68,13 +71,13 @@ namespace BluetoothBatteryUI
             };
 
             // 创建右键菜单
-            var contextMenu = new WinForms.ContextMenuStrip();
+            trayMenu = new WinForms.ContextMenuStrip();
             
             var showItem = new WinForms.ToolStripMenuItem("显示主窗口");
             showItem.Click += (s, e) => ShowMainWindow();
-            contextMenu.Items.Add(showItem);
+            trayMenu.Items.Add(showItem);
             
-            contextMenu.Items.Add(new WinForms.ToolStripSeparator());
+            trayMenu.Items.Add(new WinForms.ToolStripSeparator());
             
             var exitItem = new WinForms.ToolStripMenuItem("退出");
             exitItem.Click += (s, e) => 
@@ -82,9 +85,12 @@ namespace BluetoothBatteryUI
                 trayIcon.Visible = false;
                 System.Windows.Application.Current.Shutdown();
             };
-            contextMenu.Items.Add(exitItem);
+            trayMenu.Items.Add(exitItem);
             
-            trayIcon.ContextMenuStrip = contextMenu;
+            trayDeviceSeparator = new WinForms.ToolStripSeparator { Visible = false };
+            trayMenu.Items.Insert(0, trayDeviceSeparator);
+
+            trayIcon.ContextMenuStrip = trayMenu;
             
             // 双击托盘图标显示/隐藏窗口
             trayIcon.DoubleClick += (s, e) => ShowMainWindow();
@@ -254,12 +260,13 @@ namespace BluetoothBatteryUI
         {
             if (trayIcon == null) return;
 
-            // 只显示标记为"显示在托盘"的设备
-            var trayDevices = deviceBatteryLevels
-                .Where(kvp => settings.TrayIconDevices.Contains(kvp.Key))
+            var pinned = settings.TrayIconDevices;
+            var trayDevices = (pinned == null || pinned.Count == 0
+                    ? deviceBatteryLevels
+                    : deviceBatteryLevels.Where(kvp => pinned.Contains(kvp.Key)))
+                .OrderBy(kvp => kvp.Key)
                 .ToList();
 
-            // 构建设备列表文本
             var tooltipText = new System.Text.StringBuilder();
             tooltipText.AppendLine("蓝牙设备电量监控");
             
@@ -269,35 +276,27 @@ namespace BluetoothBatteryUI
             }
             else
             {
-                // 按电量从低到高排序
                 var sortedDevices = trayDevices
-                    .OrderBy(kvp => kvp.Value)
-                    .Take(5); // 最多显示5个设备（避免tooltip过长）
+                    .OrderBy(kvp => kvp.Value);
                 
                 foreach (var device in sortedDevices)
                 {
                     string deviceName = deviceNames.ContainsKey(device.Key) 
                         ? deviceNames[device.Key] 
                         : "未知设备";
-                    tooltipText.AppendLine($"• {deviceName}: {device.Value}%");
-                }
-                
-                if (trayDevices.Count > 5)
-                {
-                    tooltipText.Append($"... 还有 {trayDevices.Count - 5} 个设备");
+                    tooltipText.AppendLine($"• {FormatTrayDeviceName(deviceName)}: {device.Value}%");
                 }
             }
 
-            // Windows托盘图标tooltip有长度限制（63字符），需要截断
             string finalText = tooltipText.ToString();
-            if (finalText.Length > 63)
+            if (finalText.Length > 127)
             {
-                finalText = finalText.Substring(0, 60) + "...";
+                finalText = finalText.Substring(0, 124) + "...";
             }
             
             trayIcon.Text = finalText;
+            UpdateTrayMenuDevices(trayDevices);
             
-            // 更新图标显示最低电量（仅限托盘设备）
             int? lowestBattery = trayDevices.Count > 0 
                 ? trayDevices.Min(kvp => kvp.Value) 
                 : (int?)null;
@@ -305,6 +304,54 @@ namespace BluetoothBatteryUI
             var oldIcon = trayIcon.Icon;
             trayIcon.Icon = CreateBatteryIcon(lowestBattery);
             oldIcon?.Dispose(); // 释放旧图标资源
+        }
+
+        private string FormatTrayDeviceName(string deviceName)
+        {
+            const int maxLen = 14;
+            if (string.IsNullOrWhiteSpace(deviceName))
+            {
+                return "未知设备";
+            }
+
+            return deviceName.Length > maxLen
+                ? deviceName.Substring(0, maxLen - 3) + "..."
+                : deviceName;
+        }
+
+        private void UpdateTrayMenuDevices(List<KeyValuePair<string, int>> trayDevices)
+        {
+            if (trayMenu == null || trayDeviceSeparator == null)
+            {
+                return;
+            }
+
+            foreach (var item in trayDeviceMenuItems)
+            {
+                trayMenu.Items.Remove(item);
+                item.Dispose();
+            }
+            trayDeviceMenuItems.Clear();
+
+            if (trayDevices.Count == 0)
+            {
+                trayDeviceSeparator.Visible = false;
+                return;
+            }
+
+            foreach (var device in trayDevices.OrderBy(kvp => kvp.Value))
+            {
+                var name = deviceNames.ContainsKey(device.Key) ? deviceNames[device.Key] : "未知设备";
+                var text = $"• {FormatTrayDeviceName(name)}: {device.Value}%";
+                var item = new WinForms.ToolStripMenuItem(text) { Enabled = false };
+                trayDeviceMenuItems.Add(item);
+            }
+
+            for (int i = trayDeviceMenuItems.Count - 1; i >= 0; i--)
+            {
+                trayMenu.Items.Insert(0, trayDeviceMenuItems[i]);
+            }
+            trayDeviceSeparator.Visible = true;
         }
 
         private System.Drawing.Icon CreateBatteryIcon(int? batteryLevel)
@@ -1563,22 +1610,21 @@ namespace BluetoothBatteryUI
         {
             try
             {
-                // 检查设备名称中的关键字
-                string deviceName = deviceInfo.Name?.ToLower() ?? "";
-                
-                // 2.4G 设备通常在名称中包含这些关键字
-                if (deviceName.Contains("2.4g") || deviceName.Contains("2.4ghz") || 
-                    deviceName.Contains("wireless") || deviceName.Contains("dongle"))
-                {
-                    return "2.4G";
-                }
-                
-                // 通过 Bluetooth LE API 访问的设备
+                // 优先按设备ID判断蓝牙来源（当前扫描来源就是 Bluetooth LE）
                 if (deviceInfo.Id.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
                 {
                     return "蓝牙";
                 }
+
+                // 再检查设备名称中的关键字
+                string deviceName = deviceInfo.Name?.ToLower() ?? "";
                 
+                // 仅对强特征关键字判定为2.4G，避免 wireless 误伤蓝牙设备
+                if (deviceName.Contains("2.4g") || deviceName.Contains("2.4ghz") || deviceName.Contains("dongle"))
+                {
+                    return "2.4G";
+                }
+
                 // 默认返回蓝牙（因为我们主要扫描蓝牙设备）
                 return "蓝牙";
             }
